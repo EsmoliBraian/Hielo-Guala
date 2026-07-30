@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { MetricsChart } from "../components/MetricsChart";
+import { IconTrendingUp } from "../components/icons";
 import type { SalesMetrics as SalesMetricsData } from "../types/api";
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
@@ -41,33 +42,68 @@ export function SalesMetrics() {
 
   return (
     <section>
-      <h1>Métricas de ventas</h1>
+      <div className="page-header">
+        <div>
+          <h1>Métricas de ventas</h1>
+          <p className="page-subtitle">Ingresos por producto y por período</p>
+        </div>
+      </div>
 
       <div className="metrics-filters">
-        <label>
-          Desde
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label>
-          Hasta
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>
-        <label>
-          Agrupar por
-          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as "day" | "week")}>
+        <div className="field">
+          <label className="field-label" htmlFor="metrics-from">
+            Desde
+          </label>
+          <input
+            id="metrics-from"
+            type="date"
+            className="input"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="metrics-to">
+            Hasta
+          </label>
+          <input
+            id="metrics-to"
+            type="date"
+            className="input"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field-label" htmlFor="metrics-groupby">
+            Agrupar por
+          </label>
+          <select
+            id="metrics-groupby"
+            className="select"
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as "day" | "week")}
+          >
             <option value="day">Día</option>
             <option value="week">Semana</option>
           </select>
-        </label>
+        </div>
       </div>
 
       {loading || !metrics ? (
-        <p className="status-message">Cargando métricas...</p>
+        <div className="card order-card-skeleton" style={{ marginBottom: 24 }}>
+          <div className="skeleton" style={{ width: "30%", height: 30 }} />
+        </div>
       ) : (
         <>
-          <div className="stat-tile">
-            <span className="stat-tile-label">Ingresos totales</span>
-            <span className="stat-tile-value">{CURRENCY_FORMATTER.format(metrics.totalRevenue)}</span>
+          <div className="stat-tile animate-in">
+            <span className="stat-tile-icon">
+              <IconTrendingUp width={22} height={22} />
+            </span>
+            <div>
+              <div className="stat-tile-label">Ingresos totales</div>
+              <div className="stat-tile-value">{CURRENCY_FORMATTER.format(metrics.totalRevenue)}</div>
+            </div>
           </div>
 
           <h3>Por producto</h3>

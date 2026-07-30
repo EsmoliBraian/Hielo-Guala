@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { AliasManager } from "../components/AliasManager";
+import { IconChevronDown, IconTag } from "../components/icons";
 import type { Product } from "../types/api";
 
 export function ProductsAdmin() {
@@ -51,49 +52,91 @@ export function ProductsAdmin() {
     await loadProducts();
   }
 
-  if (loading) return <p className="status-message">Cargando productos...</p>;
-
   return (
     <section>
-      <h1>Productos y precios</h1>
-      <div className="products-list">
-        {products.map((product) => (
-          <article key={product.id} className={`product-card${product.active ? "" : " product-card-inactive"}`}>
-            <div className="product-row">
-              <span className="product-weight">{product.weightKg}kg</span>
-              <input
-                type="text"
-                className="product-name-input"
-                value={drafts[product.id]?.name ?? ""}
-                onChange={(e) => updateDraft(product.id, "name", e.target.value)}
-              />
-              <span className="product-price-prefix">$</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="product-price-input"
-                value={drafts[product.id]?.price ?? ""}
-                onChange={(e) => updateDraft(product.id, "price", e.target.value)}
-              />
-              <button type="button" onClick={() => handleSave(product)} disabled={savingId === product.id}>
-                {savingId === product.id ? "Guardando..." : "Guardar"}
-              </button>
-              <button type="button" className="product-toggle" onClick={() => handleToggleActive(product)}>
-                {product.active ? "Desactivar" : "Activar"}
-              </button>
-              <button
-                type="button"
-                className="product-toggle"
-                onClick={() => setExpandedId(expandedId === product.id ? null : product.id)}
-              >
-                {expandedId === product.id ? "Ocultar alias" : "Ver alias"}
-              </button>
-            </div>
-            {expandedId === product.id && <AliasManager productId={product.id} />}
-          </article>
-        ))}
+      <div className="page-header">
+        <div>
+          <h1>Productos y precios</h1>
+          <p className="page-subtitle">Editá precios y las palabras que reconoce el parser de WhatsApp</p>
+        </div>
       </div>
+
+      {loading ? (
+        <div className="products-list">
+          <div className="card order-card-skeleton">
+            <div className="skeleton" style={{ width: "60%" }} />
+            <div className="skeleton" style={{ width: "40%" }} />
+          </div>
+          <div className="card order-card-skeleton">
+            <div className="skeleton" style={{ width: "60%" }} />
+            <div className="skeleton" style={{ width: "40%" }} />
+          </div>
+        </div>
+      ) : (
+        <div className="products-list">
+          {products.map((product) => {
+            const isExpanded = expandedId === product.id;
+            return (
+              <article
+                key={product.id}
+                className={`product-card animate-in${product.active ? "" : " product-card-inactive"}`}
+              >
+                <div className="product-row">
+                  <span className="product-weight">{product.weightKg}kg</span>
+                  <input
+                    type="text"
+                    className="input product-name-input"
+                    value={drafts[product.id]?.name ?? ""}
+                    onChange={(e) => updateDraft(product.id, "name", e.target.value)}
+                  />
+                  <div className="input-group product-price-group">
+                    <span className="input-group-prefix">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={drafts[product.id]?.price ?? ""}
+                      onChange={(e) => updateDraft(product.id, "price", e.target.value)}
+                    />
+                  </div>
+                  {!product.active && <span className="badge badge-neutral">Inactivo</span>}
+                  <div className="product-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleSave(product)}
+                      disabled={savingId === product.id}
+                    >
+                      {savingId === product.id ? "Guardando..." : "Guardar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleToggleActive(product)}
+                    >
+                      {product.active ? "Desactivar" : "Activar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setExpandedId(isExpanded ? null : product.id)}
+                    >
+                      <IconTag width={15} height={15} />
+                      Alias
+                      <IconChevronDown
+                        width={15}
+                        height={15}
+                        className={`chevron${isExpanded ? " chevron-open" : ""}`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                {isExpanded && <AliasManager productId={product.id} />}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

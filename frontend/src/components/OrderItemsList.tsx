@@ -1,8 +1,14 @@
 import type { OrderItem } from "../types/api";
+import { IconAlertTriangle, IconPackage } from "./icons";
 
 export function OrderItemsList({ items }: { items: OrderItem[] }) {
   if (items.length === 0) {
-    return <p className="order-items-empty">Sin ítems reconocidos — revisar mensaje original.</p>;
+    return (
+      <p className="order-items-empty">
+        <IconAlertTriangle width={16} height={16} />
+        Sin ítems reconocidos — revisar mensaje original.
+      </p>
+    );
   }
 
   return (
@@ -11,11 +17,14 @@ export function OrderItemsList({ items }: { items: OrderItem[] }) {
         <li key={item.id} className={item.matched ? "" : "order-item-unmatched"}>
           {item.matched ? (
             <>
-              <strong>{item.quantity}x</strong> {item.product?.name ?? "Producto"}
+              <IconPackage width={16} height={16} />
+              <span className="item-qty">{item.quantity}×</span>
+              {item.product?.name ?? "Producto"}
             </>
           ) : (
             <>
-              ⚠️ No reconocido: "{item.rawFragment}" — revisar manualmente
+              <IconAlertTriangle width={16} height={16} />
+              No reconocido: "{item.rawFragment}" — revisar manualmente
             </>
           )}
         </li>

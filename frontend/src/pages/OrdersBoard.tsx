@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { OrderCard } from "../components/OrderCard";
+import { IconAlertTriangle, IconInbox } from "../components/icons";
 import type { Order } from "../types/api";
 
 const POLL_INTERVAL_MS = 15_000;
+
+function OrderCardSkeleton() {
+  return (
+    <div className="card order-card-skeleton">
+      <div className="skeleton" style={{ width: "40%" }} />
+      <div className="skeleton" style={{ width: "90%" }} />
+      <div className="skeleton" style={{ width: "70%" }} />
+      <div className="skeleton" style={{ width: "30%", height: 24 }} />
+    </div>
+  );
+}
 
 export function OrdersBoard() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -33,15 +45,47 @@ export function OrdersBoard() {
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
   }
 
-  if (loading) return <p className="status-message">Cargando pedidos...</p>;
-  if (error) return <p className="status-message status-error">{error}</p>;
-
   return (
     <section>
-      <h1>Pedidos pendientes</h1>
-      {orders.length === 0 ? (
-        <p className="status-message">No hay pedidos pendientes.</p>
-      ) : (
+      <div className="page-header">
+        <div>
+          <h1>Pedidos pendientes</h1>
+          <p className="page-subtitle">Ordenados por quién pidió primero</p>
+        </div>
+        {!loading && !error && (
+          <span className="count-pill">
+            <span className="count-pill-dot" />
+            {orders.length} en cola
+          </span>
+        )}
+      </div>
+
+      {loading && (
+        <div className="orders-list">
+          <OrderCardSkeleton />
+          <OrderCardSkeleton />
+          <OrderCardSkeleton />
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="alert alert-error">
+          <IconAlertTriangle width={18} height={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {!loading && !error && orders.length === 0 && (
+        <div className="empty-state">
+          <span className="empty-state-icon">
+            <IconInbox width={24} height={24} />
+          </span>
+          <span className="empty-state-title">No hay pedidos pendientes</span>
+          <span>Los nuevos pedidos de WhatsApp van a aparecer acá automáticamente.</span>
+        </div>
+      )}
+
+      {!loading && !error && orders.length > 0 && (
         <div className="orders-list">
           {orders.map((order, index) => (
             <OrderCard key={order.id} order={order} position={index + 1} onDeliver={handleDeliver} />

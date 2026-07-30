@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { IconTrendingUp } from "./icons";
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -13,7 +14,14 @@ interface MetricsChartProps {
 
 export function MetricsChart({ data }: MetricsChartProps) {
   if (data.length === 0) {
-    return <p className="status-message">Sin datos para el período seleccionado.</p>;
+    return (
+      <div className="empty-state" style={{ marginBottom: 24, padding: 32 }}>
+        <span className="empty-state-icon">
+          <IconTrendingUp width={20} height={20} />
+        </span>
+        <span>Sin datos para el período seleccionado.</span>
+      </div>
+    );
   }
 
   return (
@@ -40,7 +48,8 @@ export function MetricsChart({ data }: MetricsChartProps) {
             contentStyle={{
               background: "var(--surface-1)",
               border: "1px solid var(--gridline)",
-              borderRadius: 8,
+              borderRadius: 12,
+              boxShadow: "var(--shadow-md)",
               color: "var(--text-primary)",
             }}
           />

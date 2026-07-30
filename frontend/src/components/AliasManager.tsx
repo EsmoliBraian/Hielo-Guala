@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { ProductAlias } from "../types/api";
+import { IconPlus, IconX } from "./icons";
 
 export function AliasManager({ productId }: { productId: string }) {
   const [aliases, setAliases] = useState<ProductAlias[]>([]);
@@ -40,7 +41,7 @@ export function AliasManager({ productId }: { productId: string }) {
     setAliases((prev) => prev.filter((a) => a.id !== id));
   }
 
-  if (loading) return <p className="status-message">Cargando alias...</p>;
+  if (loading) return <p className="status-message status-message-inline">Cargando alias...</p>;
 
   return (
     <div className="alias-manager">
@@ -49,25 +50,33 @@ export function AliasManager({ productId }: { productId: string }) {
           <span key={alias.id} className="alias-chip">
             {alias.alias}
             <button type="button" onClick={() => handleRemove(alias.id)} aria-label={`Quitar ${alias.alias}`}>
-              ×
+              <IconX width={12} height={12} strokeWidth={2.5} />
             </button>
           </span>
         ))}
-        {aliases.length === 0 && <span className="status-message">Sin alias todavía.</span>}
+        {aliases.length === 0 && (
+          <span className="status-message status-message-inline">Sin alias todavía.</span>
+        )}
       </div>
       <div className="alias-add">
         <input
           type="text"
+          className="input"
           placeholder='Ej: "hielo chico"'
           value={newAlias}
           onChange={(e) => setNewAlias(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
         />
-        <button type="button" onClick={handleAdd}>
+        <button type="button" className="btn btn-secondary" onClick={handleAdd}>
+          <IconPlus width={15} height={15} />
           Agregar
         </button>
       </div>
-      {error && <p className="status-error">{error}</p>}
+      {error && (
+        <p className="status-error" style={{ marginTop: 8, fontSize: 13 }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
