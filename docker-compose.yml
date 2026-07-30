@@ -127,6 +127,8 @@ services:
       - evolution_instances:/evolution/instances
 
   # UI web para crear la instancia y escanear el QR sin usar curl.
+  # NO levantar por defecto: la imagen :latest tiene un bug conocido (nginx no
+  # arranca, Cache-Control inválido en su config) — ver n8n/README.md sección B.
   evolution-manager:
     image: evoapicloud/evolution-manager:latest
     restart: unless-stopped

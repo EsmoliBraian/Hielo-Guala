@@ -76,22 +76,30 @@ Solo n8n necesita ser alcanzable por Meta desde internet (URL pública HTTPS). T
 ### B.1 Levantar los servicios
 
 ```bash
-docker compose up -d evolution-postgres evolution-redis evolution-api evolution-manager
+docker compose up -d evolution-postgres evolution-redis evolution-api
 ```
 
-Esto levanta:
-- `evolution-api` (puerto 8080): el servidor que habla con WhatsApp.
-- `evolution-manager` (puerto 8081): UI web para crear la instancia y ver el QR sin usar curl.
+`evolution-api` (puerto 8080) es el servidor que habla con WhatsApp. **`evolution-manager` (la UI web, puerto 8081) tiene un bug conocido en la imagen oficial** (nginx falla al arrancar por un `Cache-Control` inválido en su config) — no vale la pena levantarlo, se usa la API REST directo con curl/Postman/Invoke-RestMethod.
 
 Revisá que las variables `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE_NAME`, `EVOLUTION_POSTGRES_*` estén completas en tu `.env` (tienen defaults de ejemplo en `.env.example`).
 
-### B.2 Crear la instancia y escanear el QR
+### B.2 Crear la instancia y vincular el WhatsApp
 
-1. Entrar a **http://localhost:8081** (Evolution Manager).
-2. Conectarse al servidor: URL `http://localhost:8080`, API Key = el valor de `EVOLUTION_API_KEY` de tu `.env`.
-3. Crear una instancia nueva con el nombre que pusiste en `EVOLUTION_INSTANCE_NAME` (por defecto `hielo-guala`).
-4. Te va a mostrar un código QR — escanealo desde el WhatsApp que vas a usar (**Configuración → Dispositivos vinculados → Vincular un dispositivo**).
-5. Una vez conectado, el estado de la instancia pasa a "open"/"conectado".
+Crear la instancia (una sola vez):
+
+```bash
+curl -X POST http://localhost:8080/instance/create \
+  -H "apikey: TU_EVOLUTION_API_KEY" -H "Content-Type: application/json" \
+  -d '{"instanceName":"hielo-guala","integration":"WHATSAPP-BAILEYS","qrcode":true}'
+```
+
+Después, elegir **uno** de estos dos métodos para vincular (no repetir el pedido de código/QR varias veces seguidas — WhatsApp bloquea temporalmente "vincular dispositivo nuevo" si detecta muchos intentos en poco tiempo, con un mensaje de "intentá más tarde" que puede tardar horas en liberarse):
+
+**Opción QR** — `GET http://localhost:8080/instance/connect/hielo-guala` (header `apikey`) devuelve `{ "base64": "data:image/png;base64,..." }`. Escanear desde **WhatsApp → Configuración → Dispositivos vinculados → Vincular un dispositivo**.
+
+**Opción código por número** — `GET http://localhost:8080/instance/connect/hielo-guala?number=5491122334455` (tu número, sin `+` ni espacios) devuelve un `pairingCode` de 8 caracteres. En el celular: **WhatsApp → Dispositivos vinculados → Vincular un dispositivo → Vincular con número de teléfono** y escribir ese código. (Es el mismo límite de "vincular dispositivo" de WhatsApp por debajo, así que puede toparse con el mismo bloqueo si el QR ya se pidió muchas veces.)
+
+Una vez conectado, `GET http://localhost:8080/instance/connectionState/hielo-guala` muestra `"state": "open"`.
 
 El webhook ya queda configurado automáticamente hacia n8n (`WEBHOOK_GLOBAL_URL` en `docker-compose.yml` apunta a `http://n8n:5678/webhook/hielo-guala-evolution`), no hace falta tocar nada ahí.
 
