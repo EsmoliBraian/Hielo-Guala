@@ -1,0 +1,115 @@
+import { SPANISH_NUMBER_WORDS } from "./numberWords.js";
+import { stripDiacritics } from "./textNormalize.js";
+
+export interface AliasEntry {
+  /** Already normalized (lowercase, no accents) product alias. */
+  alias: string;
+  productId: string;
+  weightKg: number;
+}
+
+export interface ParsedItem {
+  productId: string | null;
+  rawFragment: string;
+  quantity: number;
+  matched: boolean;
+}
+
+function normalize(text: string): string {
+  return stripDiacritics(text.toLowerCase())
+    .replace(/[.;!?]/g, " ") // keep ',' — it's a segment separator
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function segment(text: string): string[] {
+  return text
+    .split(/\s+y\s+|,|\+|\s+mas\s+|\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function extractQuantity(segmentText: string): { quantity: number; rest: string } {
+  const words = segmentText.split(" ");
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+
+    if (/^\d+$/.test(word)) {
+      const rest = [...words.slice(0, i), ...words.slice(i + 1)].join(" ").trim();
+      return { quantity: parseInt(word, 10), rest };
+    }
+
+    const attached = word.match(/^(\d+)([a-z]+)$/);
+    if (attached) {
+      const rest = [...words.slice(0, i), attached[2], ...words.slice(i + 1)].join(" ").trim();
+      return { quantity: parseInt(attached[1], 10), rest };
+    }
+
+    if (word in SPANISH_NUMBER_WORDS) {
+      const rest = [...words.slice(0, i), ...words.slice(i + 1)].join(" ").trim();
+      return { quantity: SPANISH_NUMBER_WORDS[word], rest };
+    }
+  }
+
+  return { quantity: 1, rest: segmentText };
+}
+
+function stripPlural(word: string): string {
+  return word.endsWith("s") ? word.slice(0, -1) : word;
+}
+
+function singularizeWords(text: string): string {
+  return text.split(" ").map(stripPlural).join(" ");
+}
+
+function matchAlias(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
+  if (!rest) return null;
+
+  const sorted = [...aliasIndex].sort((a, b) => b.alias.length - a.alias.length);
+  const restSingular = singularizeWords(rest);
+
+  for (const entry of sorted) {
+    if (rest === entry.alias) return entry;
+  }
+
+  for (const entry of sorted) {
+    if (restSingular === singularizeWords(entry.alias)) return entry;
+  }
+
+  for (const entry of sorted) {
+    if (restSingular.includes(singularizeWords(entry.alias))) return entry;
+  }
+
+  return null;
+}
+
+function matchByWeightRegex(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
+  const weightMatch = rest.match(/(\d+)\s?kg/);
+  if (!weightMatch) return null;
+
+  const weightKg = parseInt(weightMatch[1], 10);
+  return aliasIndex.find((entry) => entry.weightKg === weightKg) ?? null;
+}
+
+/**
+ * Pure, rule-based parser for free-text WhatsApp orders (e.g. "3bolsitas y 1 bolson").
+ * Never drops a fragment it can't recognize — unmatched pieces come back as
+ * items with matched:false so the order can still be created for manual review.
+ */
+export function parseOrderText(text: string, aliasIndex: AliasEntry[]): ParsedItem[] {
+  const normalized = normalize(text);
+  if (!normalized) return [];
+
+  return segment(normalized).map((seg) => {
+    const { quantity, rest } = extractQuantity(seg);
+    const match = matchAlias(rest, aliasIndex) ?? matchByWeightRegex(rest, aliasIndex);
+
+    return {
+      productId: match ? match.productId : null,
+      rawFragment: seg,
+      quantity,
+      matched: Boolean(match),
+    };
+  });
+}
