@@ -58,6 +58,13 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL}
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
       TZ: ${TZ}
+      # Permite que el workflow lea estas variables vía {{$env.NOMBRE}}
+      # en vez de hardcodear secretos dentro del JSON versionado en git.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      BACKEND_URL: http://backend:3000
+      WHATSAPP_CLOUD_API_TOKEN: ${WHATSAPP_CLOUD_API_TOKEN}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
     ports:
       - "5678:5678"
     depends_on:
