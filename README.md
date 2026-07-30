@@ -51,4 +51,4 @@ docs/       Documentación de arquitectura y reglas del parser
 - [x] M4 — Tablero de pedidos (FIFO + Entregado)
 - [x] M5 — Administración de productos/precios + métricas de ventas
 - [x] M6 — Workflow de n8n + WhatsApp Cloud API
-- [ ] M7 — Validación end-to-end (`v0.1.0-mvp`)
+- [x] M7 — Validación end-to-end (`v0.1.0-mvp`)
