@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  DELIVERED
+  CANCELLED
+}
+
+model Product {
+  id         String         @id @default(cuid())
+  name       String         @unique
+  weightKg   Int
+  price      Decimal        @db.Decimal(10, 2)
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  aliases    ProductAlias[]
+  orderItems OrderItem[]
+  saleItems  SaleItem[]
+}
+
+model ProductAlias {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  alias     String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  customerPhone  String
+  rawMessage     String
+  receivedAt     DateTime
+  status         OrderStatus @default(PENDING)
+  botAnswered    Boolean     @default(false)
+  botAnswerError String?
+  waMessageId    String?     @unique
+  deliveredAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  items          OrderItem[]
+  sale           Sale?
+
+  @@index([status, receivedAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  rawFragment String
+  quantity    Int
+  matched     Boolean  @default(true)
+
+  @@index([orderId])
+}
+
+model Sale {
+  id          String     @id @default(cuid())
+  orderId     String     @unique
+  order       Order      @relation(fields: [orderId], references: [id])
+  deliveredAt DateTime   @default(now())
+  totalAmount Decimal    @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now())
+  items       SaleItem[]
+}
+
+model SaleItem {
+  id                  String   @id @default(cuid())
+  saleId              String
+  sale                Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId           String?
+  product             Product? @relation(fields: [productId], references: [id])
+  productNameSnapshot String
+  quantity            Int
+  unitPriceSnapshot   Decimal  @db.Decimal(10, 2)
+  lineTotal           Decimal  @db.Decimal(10, 2)
+
+  @@index([saleId])
+}
