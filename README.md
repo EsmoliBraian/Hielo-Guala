@@ -10,7 +10,7 @@ En construcción — MVP en desarrollo por milestones. Ver [docs/ARCHITECTURE.md
 
 - **Backend**: Node.js + TypeScript + Express + Prisma (PostgreSQL)
 - **Frontend**: React + Vite
-- **Automatización**: n8n (self-hosted) + WhatsApp Cloud API (Meta)
+- **Automatización**: n8n (self-hosted) + WhatsApp — dos opciones, ver [n8n/README.md](n8n/README.md): Cloud API oficial (Meta) o Evolution API (no oficial, por QR)
 - **Infra**: Docker Compose (Postgres, backend, frontend, n8n)
 
 ## Requisitos previos

@@ -1,0 +1,254 @@
+{
+  "name": "Hielo Guala - WhatsApp (Evolution API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hielo-guala-evolution",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "0f6f5f2a-0001-4a10-8e10-a1b2c3d4e601",
+      "name": "Webhook - Evolution",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 240],
+      "webhookId": "hielo-guala-evolution"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "is-incoming-message",
+              "leftValue": "={{ $json.body.event === 'messages.upsert' && $json.body.data?.key?.fromMe === false && Boolean($json.body.data?.message) }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0f6f5f2a-0002-4a10-8e10-a1b2c3d4e602",
+      "name": "IF - Es mensaje entrante",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [20, 240]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "customerPhone",
+              "name": "customerPhone",
+              "type": "string",
+              "value": "={{$json.body.data.key.remoteJid.split('@')[0]}}"
+            },
+            {
+              "id": "rawMessage",
+              "name": "rawMessage",
+              "type": "string",
+              "value": "={{$json.body.data.message.conversation ?? $json.body.data.message.extendedTextMessage?.text ?? ''}}"
+            },
+            {
+              "id": "waMessageId",
+              "name": "waMessageId",
+              "type": "string",
+              "value": "={{$json.body.data.key.id}}"
+            },
+            {
+              "id": "receivedAt",
+              "name": "receivedAt",
+              "type": "string",
+              "value": "={{ new Date(Number($json.body.data.messageTimestamp ?? $json.body.timestamp ?? (Date.now()/1000)) * 1000).toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f6f5f2a-0003-4a10-8e10-a1b2c3d4e603",
+      "name": "Set - Extraer datos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/whatsapp/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ customerPhone: $json.customerPhone, rawMessage: $json.rawMessage, waMessageId: $json.waMessageId, receivedAt: $json.receivedAt }) }}",
+        "options": {}
+      },
+      "id": "0f6f5f2a-0004-4a10-8e10-a1b2c3d4e604",
+      "name": "HTTP Request - Crear pedido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 240]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "replyText",
+              "name": "replyText",
+              "type": "string",
+              "value": "={{ (() => { const matched = ($json.items || []).filter(i => i.matched); const base = matched.length ? 'Pedido recibido: ' + matched.map(i => i.quantity + 'x ' + (i.product ? i.product.name : 'producto')).join(', ') + '. ¡Gracias!' : 'Recibimos tu mensaje pero no pudimos identificar los productos.'; const extra = ($json.unmatchedCount || 0) > 0 ? ' Una parte del pedido no la entendimos, en breve te lo confirmamos.' : ''; return base + extra; })() }}"
+            },
+            {
+              "id": "customerPhone",
+              "name": "customerPhone",
+              "type": "string",
+              "value": "={{$('Set - Extraer datos').item.json.customerPhone}}"
+            },
+            {
+              "id": "orderId",
+              "name": "orderId",
+              "type": "string",
+              "value": "={{$json.orderId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f6f5f2a-0005-4a10-8e10-a1b2c3d4e605",
+      "name": "Set - Armar respuesta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EVOLUTION_API_URL}}/message/sendText/{{$env.EVOLUTION_INSTANCE_NAME}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "apikey", "value": "={{$env.EVOLUTION_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.customerPhone, text: $json.replyText }) }}",
+        "options": {}
+      },
+      "id": "0f6f5f2a-0006-4a10-8e10-a1b2c3d4e606",
+      "name": "HTTP Request - Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [900, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "wa-send-failed",
+              "leftValue": "={{ $json.error !== undefined }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0f6f5f2a-0007-4a10-8e10-a1b2c3d4e607",
+      "name": "IF - Envío OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/whatsapp/orders/{{$('Set - Armar respuesta').item.json.orderId}}/bot-answered",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ success: true }) }}",
+        "options": {}
+      },
+      "id": "0f6f5f2a-0008-4a10-8e10-a1b2c3d4e608",
+      "name": "HTTP Request - Confirmar bot OK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BACKEND_URL}}/api/whatsapp/orders/{{$('Set - Armar respuesta').item.json.orderId}}/bot-answered",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ success: false, error: ($json.error && $json.error.message) || 'Error enviando WhatsApp' }) }}",
+        "options": {}
+      },
+      "id": "0f6f5f2a-0009-4a10-8e10-a1b2c3d4e609",
+      "name": "HTTP Request - Confirmar bot Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 340]
+    },
+    {
+      "parameters": {},
+      "id": "0f6f5f2a-000a-4a10-8e10-a1b2c3d4e60a",
+      "name": "NoOp - Fin",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1560, 240]
+    },
+    {
+      "parameters": {},
+      "id": "0f6f5f2a-000b-4a10-8e10-a1b2c3d4e60b",
+      "name": "NoOp - Ignorar evento",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [240, 420]
+    }
+  ],
+  "connections": {
+    "Webhook - Evolution": {
+      "main": [[{ "node": "IF - Es mensaje entrante", "type": "main", "index": 0 }]]
+    },
+    "IF - Es mensaje entrante": {
+      "main": [
+        [{ "node": "Set - Extraer datos", "type": "main", "index": 0 }],
+        [{ "node": "NoOp - Ignorar evento", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set - Extraer datos": {
+      "main": [[{ "node": "HTTP Request - Crear pedido", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request - Crear pedido": {
+      "main": [[{ "node": "Set - Armar respuesta", "type": "main", "index": 0 }]]
+    },
+    "Set - Armar respuesta": {
+      "main": [[{ "node": "HTTP Request - Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request - Enviar WhatsApp": {
+      "main": [[{ "node": "IF - Envío OK", "type": "main", "index": 0 }]]
+    },
+    "IF - Envío OK": {
+      "main": [
+        [{ "node": "HTTP Request - Confirmar bot Error", "type": "main", "index": 0 }],
+        [{ "node": "HTTP Request - Confirmar bot OK", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Request - Confirmar bot OK": {
+      "main": [[{ "node": "NoOp - Fin", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request - Confirmar bot Error": {
+      "main": [[{ "node": "NoOp - Fin", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
