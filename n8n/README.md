@@ -45,9 +45,10 @@ Después de importar:
 4. Rama verdadera → **Edit Fields (Set)**: extraer `customerPhone`, `rawMessage`, `waMessageId`, `receivedAt` del mensaje
 5. **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders` con esos 4 campos
 6. **Edit Fields (Set)**: armar el texto de confirmación a partir de la respuesta (avisa si hubo ítems no reconocidos)
-7. **HTTP Request** → `POST https://graph.facebook.com/v20.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages` (header `Authorization: Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}`), con "On Error" configurado como **"Continue (using error output)"**
-8. Salida OK → **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders/{orderId}/bot-answered` con `{"success": true}`
-9. Salida con error → mismo endpoint con `{"success": false, "error": "..."}`
+7. **HTTP Request** → `POST https://graph.facebook.com/v20.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages` (header `Authorization: Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}`), con "On Error" configurado como **"Continue"** (no "Continue using error output" — esa variante con doble salida no se importó de forma confiable en las pruebas)
+8. **IF**: `{{$json.error !== undefined}}` — si el request anterior falló, `$json` queda como `{ error: ... }` en vez de la respuesta de Meta
+9. Rama falsa (envío OK) → **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders/{orderId}/bot-answered` con `{"success": true}`
+10. Rama verdadera (falló) → mismo endpoint con `{"success": false, "error": "..."}`
 
 ## 5. Probar sin un número de WhatsApp real
 
