@@ -3,6 +3,10 @@
    ========================================================================== */
 
 :root {
+  /* Lets native controls (date picker icon, select arrow, scrollbars)
+     render with light chrome — overridden to dark below. */
+  color-scheme: light;
+
   /* Brand palette */
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
@@ -61,6 +65,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --color-bg: #0b1220;
     --color-surface: #111827;
     --color-primary: #3b82f6;
@@ -694,8 +699,8 @@ button {
   height: 28px;
   padding: 0 6px;
   border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--text-on-primary);
   font-weight: 700;
   font-size: 13px;
 }
@@ -720,7 +725,7 @@ button {
 
 .order-phone svg,
 .order-time svg {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .order-time {
@@ -761,7 +766,7 @@ button {
 }
 
 .order-items li svg {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -930,8 +935,8 @@ button {
   height: 32px;
   padding: 0 10px;
   border-radius: var(--radius-sm);
-  background: var(--color-secondary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--text-on-primary);
   font-weight: 700;
   font-size: 13px;
 }
