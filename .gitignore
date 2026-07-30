@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+npm-debug.log*
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# n8n local data
+n8n/data/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
