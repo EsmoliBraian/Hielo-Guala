@@ -39,6 +39,10 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      # Docker Desktop's bind-mount file watcher can miss host-side edits
+      # (esp. on Windows), leaving Vite's dev server serving stale modules.
+      # Polling makes it actually notice file changes for hot reload.
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5173:5173"
     depends_on:
