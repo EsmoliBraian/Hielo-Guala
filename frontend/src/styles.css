@@ -1,0 +1,135 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #f2f5f7;
+  color: #1a2733;
+}
+
+.app-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: 16px;
+  background: #0b6fa8;
+  color: white;
+}
+
+.app-header h2 {
+  margin: 0;
+}
+
+.app-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.status-message {
+  color: #55636e;
+  text-align: center;
+  padding: 32px 0;
+}
+
+.status-error {
+  color: #b3261e;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.order-card {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.order-card-warning {
+  border: 1px solid #e0a800;
+}
+
+.order-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.order-position {
+  font-weight: 700;
+  color: #0b6fa8;
+}
+
+.order-phone {
+  font-weight: 600;
+}
+
+.order-time {
+  color: #55636e;
+  margin-left: auto;
+}
+
+.bot-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.bot-badge-ok {
+  background: #e3f4e3;
+  color: #1e7a1e;
+}
+
+.bot-badge-pending {
+  background: #fbeee0;
+  color: #a15c00;
+}
+
+.order-raw-message {
+  color: #55636e;
+  font-style: italic;
+  margin: 4px 0 10px;
+}
+
+.order-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-item-unmatched {
+  color: #a15c00;
+}
+
+.order-items-empty {
+  color: #a15c00;
+  margin: 0 0 12px;
+}
+
+.order-deliver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.order-deliver input {
+  width: 20px;
+  height: 20px;
+}
