@@ -41,6 +41,44 @@ export async function createOrderFromWhatsapp(input: CreateOrderFromWhatsappInpu
   });
 }
 
+interface CreateManualOrderInput {
+  customerPhone?: string;
+  items: { productId: string; quantity: number }[];
+}
+
+/**
+ * For orders taken over the counter or by phone call — no WhatsApp message
+ * behind it, so waMessageId stays null (nullable+unique, so this never
+ * collides with a real WhatsApp order) and items are picked directly from
+ * the product list instead of going through the text parser.
+ */
+export async function createManualOrder(input: CreateManualOrderInput) {
+  const products = await prisma.product.findMany({
+    where: { id: { in: input.items.map((item) => item.productId) }, active: true },
+  });
+  const productById = new Map(products.map((p) => [p.id, p]));
+
+  const missing = input.items.find((item) => !productById.has(item.productId));
+  if (missing) throw new HttpError(404, `Producto no encontrado: ${missing.productId}`);
+
+  return prisma.order.create({
+    data: {
+      customerPhone: input.customerPhone?.trim() || "Mostrador",
+      rawMessage: "Pedido cargado manualmente",
+      receivedAt: new Date(),
+      items: {
+        create: input.items.map((item) => ({
+          productId: item.productId,
+          rawFragment: productById.get(item.productId)!.name,
+          quantity: item.quantity,
+          matched: true,
+        })),
+      },
+    },
+    include: { items: { include: { product: true } } },
+  });
+}
+
 export async function markBotAnswered(orderId: string, success: boolean, error?: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new HttpError(404, "Pedido no encontrado");

@@ -42,10 +42,17 @@ export function OrderCard({ order, position, onDeliver }: OrderCardProps) {
           <IconClock width={15} height={15} />
           {TIME_FORMATTER.format(new Date(order.receivedAt))}
         </span>
-        <span className={`badge ${order.botAnswered ? "badge-success" : "badge-warning"}`}>
-          <span className="badge-dot" />
-          {order.botAnswered ? "Bot confirmó" : "Bot sin confirmar"}
-        </span>
+        {order.waMessageId === null ? (
+          <span className="badge badge-primary">
+            <span className="badge-dot" />
+            Pedido manual
+          </span>
+        ) : (
+          <span className={`badge ${order.botAnswered ? "badge-success" : "badge-warning"}`}>
+            <span className="badge-dot" />
+            {order.botAnswered ? "Bot confirmó" : "Bot sin confirmar"}
+          </span>
+        )}
       </header>
 
       <p className="order-raw-message">"{order.rawMessage}"</p>

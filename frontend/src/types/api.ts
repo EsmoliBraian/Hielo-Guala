@@ -33,6 +33,8 @@ export interface Order {
   status: OrderStatus;
   botAnswered: boolean;
   botAnswerError: string | null;
+  /** null for orders entered manually (no WhatsApp message behind them). */
+  waMessageId: string | null;
   deliveredAt: string | null;
   items: OrderItem[];
 }

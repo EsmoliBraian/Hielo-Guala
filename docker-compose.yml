@@ -24,6 +24,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${PORT}
       TZ: ${TZ}
+      # Same Docker-Desktop-on-Windows bind-mount watcher issue as the
+      # frontend: tsx watch needs polling to notice host-side file edits.
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "3000:3000"
     depends_on:

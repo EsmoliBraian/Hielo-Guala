@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { OrderCard } from "../components/OrderCard";
-import { IconAlertTriangle, IconInbox } from "../components/icons";
+import { IconAlertTriangle, IconInbox, IconPlus } from "../components/icons";
+import { NewOrderForm } from "../components/NewOrderForm";
 import type { Order } from "../types/api";
 
 const POLL_INTERVAL_MS = 15_000;
@@ -21,6 +22,7 @@ export function OrdersBoard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNewOrderForm, setShowNewOrderForm] = useState(false);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -45,6 +47,11 @@ export function OrdersBoard() {
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
   }
 
+  async function handleOrderCreated() {
+    setShowNewOrderForm(false);
+    await loadOrders();
+  }
+
   return (
     <section>
       <div className="page-header">
@@ -52,13 +59,25 @@ export function OrdersBoard() {
           <h1>Pedidos pendientes</h1>
           <p className="page-subtitle">Ordenados por quién pidió primero</p>
         </div>
-        {!loading && !error && (
-          <span className="count-pill">
-            <span className="count-pill-dot" />
-            {orders.length} en cola
-          </span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {!loading && !error && (
+            <span className="count-pill">
+              <span className="count-pill-dot" />
+              {orders.length} en cola
+            </span>
+          )}
+          {!showNewOrderForm && (
+            <button type="button" className="btn btn-primary" onClick={() => setShowNewOrderForm(true)}>
+              <IconPlus width={16} height={16} />
+              Nuevo pedido
+            </button>
+          )}
+        </div>
       </div>
+
+      {showNewOrderForm && (
+        <NewOrderForm onCreated={handleOrderCreated} onCancel={() => setShowNewOrderForm(false)} />
+      )}
 
       {loading && (
         <div className="orders-list">
