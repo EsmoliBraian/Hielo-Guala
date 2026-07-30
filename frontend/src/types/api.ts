@@ -38,6 +38,8 @@ export interface Order {
   waMessageId: string | null;
   deliveredAt: string | null;
   items: OrderItem[];
+  /** Only present on history rows (from GET /orders/history); items omitted there. */
+  sale?: Pick<Sale, "id" | "totalAmount" | "paymentMethod" | "deliveredAt"> | null;
 }
 
 export interface SaleItem {

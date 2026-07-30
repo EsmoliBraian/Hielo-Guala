@@ -1249,6 +1249,71 @@ button {
 }
 
 /* ==========================================================================
+   Order history
+   ========================================================================== */
+
+.history-section {
+  margin-top: 44px;
+}
+
+.history-days-select {
+  width: auto;
+  min-width: 160px;
+}
+
+.history-row {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.history-row-main {
+  flex: 1;
+  min-width: 200px;
+}
+
+.history-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.history-row-items {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.history-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.history-row-total {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-cancel-btn {
+  color: var(--color-error);
+}
+
+.history-cancel-btn:hover:not(:disabled) {
+  background: var(--color-error-soft);
+  color: var(--color-error-soft-text);
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 

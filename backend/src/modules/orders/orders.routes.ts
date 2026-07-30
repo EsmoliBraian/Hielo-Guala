@@ -24,6 +24,10 @@ const createManualOrderSchema = z.object({
     .min(1),
 });
 
+const historyQuerySchema = z.object({
+  days: z.coerce.number().int().positive().max(365).default(7),
+});
+
 ordersRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -37,6 +41,15 @@ ordersRouter.post(
   asyncHandler(async (req, res) => {
     const data = createManualOrderSchema.parse(req.body);
     res.status(201).json(await ordersService.createManualOrder(data));
+  }),
+);
+
+// Must come before "/:id" — otherwise Express matches "history" as an :id.
+ordersRouter.get(
+  "/history",
+  asyncHandler(async (req, res) => {
+    const { days } = historyQuerySchema.parse(req.query);
+    res.json(await ordersService.listOrderHistory(days));
   }),
 );
 
@@ -54,5 +67,12 @@ ordersRouter.patch(
   asyncHandler(async (req, res) => {
     const { paymentMethod } = deliverOrderSchema.parse(req.body);
     res.json(await ordersService.deliverOrder(req.params.id, paymentMethod));
+  }),
+);
+
+ordersRouter.patch(
+  "/:id/cancel",
+  asyncHandler(async (req, res) => {
+    res.json(await ordersService.cancelOrder(req.params.id));
   }),
 );

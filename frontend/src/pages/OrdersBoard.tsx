@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { OrderCard } from "../components/OrderCard";
 import { IconAlertTriangle, IconInbox, IconPlus } from "../components/icons";
 import { NewOrderForm } from "../components/NewOrderForm";
+import { OrderHistory } from "../components/OrderHistory";
 import type { Order, PaymentMethod } from "../types/api";
 
 const POLL_INTERVAL_MS = 15_000;
@@ -53,6 +54,7 @@ export function OrdersBoard() {
   }
 
   return (
+    <>
     <section>
       <div className="page-header">
         <div>
@@ -112,5 +114,8 @@ export function OrdersBoard() {
         </div>
       )}
     </section>
+
+    <OrderHistory />
+    </>
   );
 }

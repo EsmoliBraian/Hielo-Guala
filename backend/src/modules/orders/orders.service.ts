@@ -100,6 +100,24 @@ export function listOrders(status: OrderStatus = OrderStatus.PENDING) {
   });
 }
 
+/** Delivered + cancelled orders from the last `days` days, most recent first. */
+export function listOrderHistory(days: number) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  return prisma.order.findMany({
+    where: {
+      status: { in: [OrderStatus.DELIVERED, OrderStatus.CANCELLED] },
+      receivedAt: { gte: since },
+    },
+    include: {
+      items: { include: { product: true } },
+      sale: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 export function getOrder(id: string) {
   return prisma.order.findUnique({
     where: { id },
@@ -164,5 +182,30 @@ export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
     });
 
     return { order: updatedOrder, sale };
+  });
+}
+
+/**
+ * Cancels an order — from PENDING (never delivered) or from DELIVERED
+ * (undoing a mistaken "Entregado"). In the DELIVERED case, the Sale/SaleItem
+ * snapshot is deleted too, so a cancelled order never lingers in metrics.
+ */
+export async function cancelOrder(id: string) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id } });
+    if (!order) throw new HttpError(404, "Pedido no encontrado");
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new HttpError(409, "El pedido ya está cancelado");
+    }
+
+    if (order.status === OrderStatus.DELIVERED) {
+      await tx.sale.deleteMany({ where: { orderId: id } });
+    }
+
+    return tx.order.update({
+      where: { id },
+      data: { status: OrderStatus.CANCELLED, deliveredAt: null },
+      include: { items: { include: { product: true } } },
+    });
   });
 }
