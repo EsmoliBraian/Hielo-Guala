@@ -216,8 +216,9 @@ button {
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-primary), #60a5fa);
-  color: #fff;
+  /* Fixed (not theme-flipped): the fox's white details need this dark a
+     backdrop for contrast in both light and dark mode. */
+  background: #0f172a;
   box-shadow: var(--shadow-sm);
 }
 
