@@ -14,6 +14,11 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
 model Product {
   id         String         @id @default(cuid())
   name       String         @unique
@@ -69,13 +74,15 @@ model OrderItem {
 }
 
 model Sale {
-  id          String     @id @default(cuid())
-  orderId     String     @unique
-  order       Order      @relation(fields: [orderId], references: [id])
-  deliveredAt DateTime   @default(now())
-  totalAmount Decimal    @db.Decimal(10, 2)
-  createdAt   DateTime   @default(now())
-  items       SaleItem[]
+  id            String         @id @default(cuid())
+  orderId       String         @unique
+  order         Order          @relation(fields: [orderId], references: [id])
+  deliveredAt   DateTime       @default(now())
+  totalAmount   Decimal        @db.Decimal(10, 2)
+  /// Null for sales delivered before this field existed.
+  paymentMethod PaymentMethod?
+  createdAt     DateTime       @default(now())
+  items         SaleItem[]
 }
 
 model SaleItem {

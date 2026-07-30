@@ -61,11 +61,21 @@ export async function getSalesMetrics({
     byPeriodMap.set(key, (byPeriodMap.get(key) ?? 0) + Number(sale.totalAmount));
   }
 
+  const byPaymentMethodMap = new Map<string, number>();
+  for (const sale of sales) {
+    const key = sale.paymentMethod ?? "SIN_ESPECIFICAR";
+    byPaymentMethodMap.set(key, (byPaymentMethodMap.get(key) ?? 0) + Number(sale.totalAmount));
+  }
+
   return {
     totalRevenue,
     byProduct: Array.from(byProductMap.values()),
     byPeriod: Array.from(byPeriodMap.entries())
       .map(([period, revenue]) => ({ period, revenue }))
       .sort((a, b) => a.period.localeCompare(b.period)),
+    byPaymentMethod: Array.from(byPaymentMethodMap.entries()).map(([paymentMethod, revenue]) => ({
+      paymentMethod,
+      revenue,
+    })),
   };
 }

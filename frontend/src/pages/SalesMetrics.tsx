@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { MetricsChart } from "../components/MetricsChart";
-import { IconTrendingUp } from "../components/icons";
+import { IconBankTransfer, IconCash, IconTrendingUp } from "../components/icons";
 import type { SalesMetrics as SalesMetricsData } from "../types/api";
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
@@ -9,6 +9,17 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
   currency: "ARS",
   maximumFractionDigits: 0,
 });
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Efectivo",
+  TRANSFER: "Transferencia",
+  SIN_ESPECIFICAR: "Sin especificar",
+};
+
+const PAYMENT_METHOD_ICONS: Record<string, typeof IconCash> = {
+  CASH: IconCash,
+  TRANSFER: IconBankTransfer,
+};
 
 function isoDateDaysAgo(days: number): string {
   const d = new Date();
@@ -104,6 +115,24 @@ export function SalesMetrics() {
               <div className="stat-tile-label">Ingresos totales</div>
               <div className="stat-tile-value">{CURRENCY_FORMATTER.format(metrics.totalRevenue)}</div>
             </div>
+          </div>
+
+          <h3>Por método de pago</h3>
+          <div className="stat-tile-row">
+            {metrics.byPaymentMethod.map(({ paymentMethod, revenue }) => {
+              const Icon = PAYMENT_METHOD_ICONS[paymentMethod] ?? IconCash;
+              return (
+                <div className="stat-tile stat-tile-sm animate-in" key={paymentMethod}>
+                  <span className="stat-tile-icon">
+                    <Icon width={18} height={18} />
+                  </span>
+                  <div>
+                    <div className="stat-tile-label">{PAYMENT_METHOD_LABELS[paymentMethod] ?? paymentMethod}</div>
+                    <div className="stat-tile-value stat-tile-value-sm">{CURRENCY_FORMATTER.format(revenue)}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <h3>Por producto</h3>

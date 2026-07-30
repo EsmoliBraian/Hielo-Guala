@@ -1,4 +1,5 @@
 export type OrderStatus = "PENDING" | "DELIVERED" | "CANCELLED";
+export type PaymentMethod = "CASH" | "TRANSFER";
 
 export interface Product {
   id: string;
@@ -53,6 +54,7 @@ export interface Sale {
   orderId: string;
   deliveredAt: string;
   totalAmount: string;
+  paymentMethod: PaymentMethod | null;
   items: SaleItem[];
 }
 
@@ -60,4 +62,5 @@ export interface SalesMetrics {
   totalRevenue: number;
   byProduct: { productId: string | null; productName: string; quantity: number; revenue: number }[];
   byPeriod: { period: string; revenue: number }[];
+  byPaymentMethod: { paymentMethod: string; revenue: number }[];
 }

@@ -19,6 +19,26 @@ function iconBase(props: SVGProps<SVGSVGElement>) {
   };
 }
 
+export function IconCash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6 9v.01M18 15v.01" />
+    </svg>
+  );
+}
+
+export function IconBankTransfer(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M3 10 12 4l9 6" />
+      <path d="M5 10v9M10 10v9M14 10v9M19 10v9" />
+      <path d="M3 19h18" />
+    </svg>
+  );
+}
+
 export function IconPhone(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)}>

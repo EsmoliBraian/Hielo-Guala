@@ -5,7 +5,9 @@ import { IconPlus, IconX } from "./icons";
 
 interface LineItem {
   productId: string;
-  quantity: number;
+  /** Kept as a string while editing so the field can be cleared/retyped —
+   *  a number-typed value snaps to 0 the instant the input is emptied. */
+  quantity: string;
 }
 
 interface NewOrderFormProps {
@@ -16,7 +18,7 @@ interface NewOrderFormProps {
 export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [customerPhone, setCustomerPhone] = useState("");
-  const [lines, setLines] = useState<LineItem[]>([{ productId: "", quantity: 1 }]);
+  const [lines, setLines] = useState<LineItem[]>([{ productId: "", quantity: "1" }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +31,7 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
   }
 
   function addLine() {
-    setLines((prev) => [...prev, { productId: "", quantity: 1 }]);
+    setLines((prev) => [...prev, { productId: "", quantity: "1" }]);
   }
 
   function removeLine(index: number) {
@@ -38,11 +40,19 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const items = lines.filter((line) => line.productId);
-    if (items.length === 0) {
+    const picked = lines.filter((line) => line.productId);
+    if (picked.length === 0) {
       setError("Elegí al menos un producto.");
       return;
     }
+
+    const invalid = picked.find((line) => !Number.isInteger(Number(line.quantity)) || Number(line.quantity) < 1);
+    if (invalid) {
+      setError("Revisá las cantidades — tienen que ser números enteros de 1 en adelante.");
+      return;
+    }
+
+    const items = picked.map((line) => ({ productId: line.productId, quantity: Number(line.quantity) }));
 
     setSubmitting(true);
     setError(null);
@@ -90,9 +100,10 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
             <input
               type="number"
               min="1"
+              step="1"
               className="input new-order-qty"
               value={line.quantity}
-              onChange={(e) => updateLine(index, { quantity: Number(e.target.value) })}
+              onChange={(e) => updateLine(index, { quantity: e.target.value })}
             />
             <button
               type="button"

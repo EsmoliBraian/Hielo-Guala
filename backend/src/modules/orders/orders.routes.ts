@@ -1,4 +1,4 @@
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, PaymentMethod } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler, HttpError } from "../../middleware/errorHandler.js";
@@ -7,6 +7,10 @@ import * as ordersService from "./orders.service.js";
 export const ordersRouter = Router();
 
 const statusQuerySchema = z.nativeEnum(OrderStatus).default(OrderStatus.PENDING);
+
+const deliverOrderSchema = z.object({
+  paymentMethod: z.nativeEnum(PaymentMethod),
+});
 
 const createManualOrderSchema = z.object({
   customerPhone: z.string().trim().optional(),
@@ -48,6 +52,7 @@ ordersRouter.get(
 ordersRouter.patch(
   "/:id/deliver",
   asyncHandler(async (req, res) => {
-    res.json(await ordersService.deliverOrder(req.params.id));
+    const { paymentMethod } = deliverOrderSchema.parse(req.body);
+    res.json(await ordersService.deliverOrder(req.params.id, paymentMethod));
   }),
 );

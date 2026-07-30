@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import { OrderCard } from "../components/OrderCard";
 import { IconAlertTriangle, IconInbox, IconPlus } from "../components/icons";
 import { NewOrderForm } from "../components/NewOrderForm";
-import type { Order } from "../types/api";
+import type { Order, PaymentMethod } from "../types/api";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -42,8 +42,8 @@ export function OrdersBoard() {
     return () => clearInterval(interval);
   }, [loadOrders]);
 
-  async function handleDeliver(orderId: string) {
-    await api.patch(`/orders/${orderId}/deliver`);
+  async function handleDeliver(orderId: string, paymentMethod: PaymentMethod) {
+    await api.patch(`/orders/${orderId}/deliver`, { paymentMethod });
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
   }
 

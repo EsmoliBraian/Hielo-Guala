@@ -1,4 +1,4 @@
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { parseOrderText } from "../../parser/orderParser.js";
@@ -115,7 +115,7 @@ export function getOrder(id: string) {
  * product prices, so future price changes never distort historical metrics.
  * Guarded in a transaction against double-delivery races.
  */
-export async function deliverOrder(id: string) {
+export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id },
@@ -151,6 +151,7 @@ export async function deliverOrder(id: string) {
         orderId: id,
         deliveredAt,
         totalAmount,
+        paymentMethod,
         items: { create: saleItemsData },
       },
       include: { items: true },
