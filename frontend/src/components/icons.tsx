@@ -19,46 +19,6 @@ function iconBase(props: SVGProps<SVGSVGElement>) {
   };
 }
 
-/**
- * Brand mark — minimalist geometric fox head. Flat fills (not currentColor
- * like the utility icons above), since it's the logo, not a UI glyph.
- */
-export function IconFoxLogo(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      width={22}
-      height={22}
-      viewBox="0 0 32 32"
-      fill="none"
-      aria-hidden
-      {...props}
-    >
-      <path
-        d="M4 3 L12 11 L20 11 L28 3 L30 16 Q30 20 26 22 L20 27 Q16 31 12 27 L6 22 Q2 20 2 16 Z"
-        fill="#FACC15"
-      />
-      <path d="M5 7 L10.5 10.2 L6.3 13.2 Z" fill="#FFFFFF" />
-      <path d="M27 7 L21.5 10.2 L25.7 13.2 Z" fill="#FFFFFF" />
-      <path d="M12 16.5 L20 16.5 L16 29 Z" fill="#FFFFFF" />
-      <circle cx="12.6" cy="15" r="1.3" fill="#0F172A" />
-      <circle cx="19.4" cy="15" r="1.3" fill="#0F172A" />
-      <circle cx="16" cy="18.3" r="1" fill="#0F172A" />
-    </svg>
-  );
-}
-
-export function IconSnowflake(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...iconBase(props)}>
-      <path d="M12 2v20M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5" />
-      <path d="M4.5 7l15 10M4.5 7l3.4.5M4.5 7l1-3.3" />
-      <path d="M19.5 17l-15-10M19.5 17l-3.4-.5M19.5 17l-1 3.3" />
-      <path d="M19.5 7l-15 10M19.5 7l-1-3.3M19.5 7l3.4.5" />
-      <path d="M4.5 17l15-10M4.5 17l1 3.3M4.5 17l-3.4-.5" />
-    </svg>
-  );
-}
-
 export function IconPhone(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)}>

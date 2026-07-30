@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { IconFoxLogo, IconInbox, IconTag, IconTrendingUp } from "./components/icons";
+import { IconInbox, IconTag, IconTrendingUp } from "./components/icons";
 import { OrdersBoard } from "./pages/OrdersBoard";
 import { ProductsAdmin } from "./pages/ProductsAdmin";
 import { SalesMetrics } from "./pages/SalesMetrics";
@@ -13,9 +13,7 @@ export function App() {
       <header className="app-header">
         <div className="app-header-inner">
           <div className="brand">
-            <span className="brand-mark">
-              <IconFoxLogo width={24} height={24} />
-            </span>
+            <img src="/logo-fox.png" alt="" className="brand-mark" width={34} height={34} />
             <span className="brand-word">Hielo Guala</span>
           </div>
           <nav className="app-nav">

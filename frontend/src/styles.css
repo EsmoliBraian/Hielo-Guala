@@ -210,16 +210,10 @@ button {
 }
 
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-md);
-  /* Fixed (not theme-flipped): the fox's white details need this dark a
-     backdrop for contrast in both light and dark mode. */
-  background: #0f172a;
-  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .app-nav {
