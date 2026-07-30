@@ -49,6 +49,6 @@ docs/       Documentación de arquitectura y reglas del parser
 - [ ] M2 — Modelo de datos (Prisma) + seed de productos
 - [x] M3 — API backend + parser de pedidos
 - [x] M4 — Tablero de pedidos (FIFO + Entregado)
-- [ ] M5 — Administración de productos/precios + métricas de ventas
+- [x] M5 — Administración de productos/precios + métricas de ventas
 - [ ] M6 — Workflow de n8n + WhatsApp Cloud API
 - [ ] M7 — Validación end-to-end (`v0.1.0-mvp`)

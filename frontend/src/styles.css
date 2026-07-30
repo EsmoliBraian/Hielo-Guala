@@ -1,3 +1,25 @@
+:root {
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --muted: #898781;
+  --gridline: #e1e0d9;
+  --baseline: #c3c2b7;
+  --series-1: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --series-1: #3987e5;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,6 +29,13 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: #f2f5f7;
   color: #1a2733;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0d0d0d;
+    color: #ffffff;
+  }
 }
 
 .app-shell {
@@ -24,7 +53,24 @@ body {
 }
 
 .app-header h2 {
-  margin: 0;
+  margin: 0 0 8px;
+}
+
+.app-nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-weight: 600;
+  padding-bottom: 4px;
+}
+
+.nav-link-active {
+  color: white;
+  border-bottom: 2px solid white;
 }
 
 .app-content {
@@ -132,4 +178,159 @@ body {
 .order-deliver input {
   width: 20px;
   height: 20px;
+}
+
+/* Products admin */
+
+.products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-card {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.product-card-inactive {
+  opacity: 0.55;
+}
+
+.product-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-weight {
+  font-weight: 700;
+  color: #0b6fa8;
+  min-width: 40px;
+}
+
+.product-name-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+}
+
+.product-price-prefix {
+  color: var(--text-secondary);
+}
+
+.product-price-input {
+  width: 90px;
+  padding: 6px 8px;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+}
+
+.product-toggle {
+  background: transparent;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.alias-manager {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gridline);
+}
+
+.alias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.alias-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef3f6;
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  font-size: 14px;
+}
+
+.alias-chip button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.alias-add {
+  display: flex;
+  gap: 8px;
+}
+
+.alias-add input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+}
+
+/* Sales metrics */
+
+.metrics-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.metrics-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.metrics-filters input,
+.metrics-filters select {
+  padding: 6px 8px;
+  border: 1px solid var(--baseline);
+  border-radius: 6px;
+}
+
+.stat-tile {
+  background: white;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.stat-tile-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stat-tile-value {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.viz-root {
+  background: var(--surface-1);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 20px;
 }
