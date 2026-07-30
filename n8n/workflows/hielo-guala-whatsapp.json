@@ -197,13 +197,13 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.customerPhone, text: { body: $json.replyText } }) }}",
-        "onError": "continueRegularOutput",
         "options": {}
       },
       "id": "0f6f5f1a-000a-4a10-8e10-a1b2c3d4e50a",
       "name": "HTTP Request - Enviar WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [900, 240]
     },
     {
