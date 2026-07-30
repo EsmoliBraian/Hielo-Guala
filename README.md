@@ -4,7 +4,11 @@ App para gestionar pedidos de hielo que llegan por WhatsApp: los pedidos se capt
 
 ## Estado del proyecto
 
-En construcción — MVP en desarrollo por milestones. Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el diseño completo.
+MVP completo (`v0.1.0-mvp`) y desplegado para prueba con cliente. Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el diseño completo.
+
+## En producción
+
+App corriendo en un VPS de prueba: **http://65.21.250.228/**. Ver [docs/DEPLOY.md](docs/DEPLOY.md) para acceso al servidor y cómo redesplegar.
 
 ## Stack
 
@@ -46,7 +50,7 @@ docs/       Documentación de arquitectura y reglas del parser
 ## Roadmap (milestones)
 
 - [x] M1 — Scaffold del repo + docker-compose
-- [ ] M2 — Modelo de datos (Prisma) + seed de productos
+- [x] M2 — Modelo de datos (Prisma) + seed de productos
 - [x] M3 — API backend + parser de pedidos
 - [x] M4 — Tablero de pedidos (FIFO + Entregado)
 - [x] M5 — Administración de productos/precios + métricas de ventas
