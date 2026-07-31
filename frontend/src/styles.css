@@ -35,6 +35,12 @@
   --border: #e5e7eb;
   --border-strong: #d1d5db;
 
+  /* A step below --color-surface — sidebar, page backdrop behind cards,
+     anywhere that needs to sit "under" a card without being the page bg. */
+  --color-surface-2: #f1f5f9;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+
   /* Radius scale */
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -42,11 +48,13 @@
   --radius-xl: 22px;
   --radius-full: 999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07), 0 2px 6px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.10), 0 4px 10px rgba(15, 23, 42, 0.05);
+  /* Shadows — tinted very slightly toward ink instead of pure black, and
+     layered (a tight contact shadow + a soft diffuse one) for a less
+     "boxed" feel than a single flat drop-shadow. */
+  --shadow-xs: 0 1px 2px rgba(30, 41, 59, 0.05);
+  --shadow-sm: 0 1px 2px rgba(30, 41, 59, 0.04), 0 4px 10px rgba(30, 41, 59, 0.06);
+  --shadow-md: 0 2px 6px rgba(30, 41, 59, 0.05), 0 12px 28px rgba(30, 41, 59, 0.08);
+  --shadow-lg: 0 4px 12px rgba(30, 41, 59, 0.06), 0 24px 48px rgba(30, 41, 59, 0.12);
   --shadow-focus: 0 0 0 4px var(--color-primary-soft-border);
 
   /* Motion */
@@ -93,10 +101,14 @@
     --border: #1f2937;
     --border-strong: #334155;
 
+    --color-surface-2: #0d1420;
+    --glass-bg: rgba(17, 24, 39, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.32), 0 12px 28px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.35), 0 24px 48px rgba(0, 0, 0, 0.45);
     --shadow-focus: 0 0 0 4px var(--color-primary-soft-border);
   }
 }
@@ -121,12 +133,22 @@ body {
     -apple-system,
     "Segoe UI",
     sans-serif;
-  background: var(--color-bg);
+  /* A whisper of the brand hue in the corner instead of a flat fill —
+     the kind of "small variation" that keeps a neutral page from
+     reading as a single dead slab of color. */
+  background:
+    radial-gradient(
+      1100px 560px at 100% -12%,
+      color-mix(in srgb, var(--color-primary) 7%, transparent),
+      transparent 60%
+    ),
+    var(--color-bg);
+  background-attachment: fixed;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition:
-    background var(--transition),
+    background-color var(--transition),
     color var(--transition);
 }
 
@@ -177,26 +199,23 @@ button {
 .app-shell {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+  align-items: stretch;
 }
 
-.app-header {
+.app-sidebar {
+  width: 244px;
+  flex-shrink: 0;
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-}
-
-.app-header-inner {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 14px 24px;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  gap: 32px;
+  flex-direction: column;
+  padding: 18px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  z-index: 30;
 }
 
 .brand {
@@ -204,39 +223,35 @@ button {
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-primary);
   white-space: nowrap;
+  padding: 6px 8px 18px;
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   object-fit: contain;
 }
 
 .app-nav {
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.app-nav::-webkit-scrollbar {
-  display: none;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .nav-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
   color: var(--text-secondary);
   text-decoration: none;
   font-weight: 550;
   font-size: 14px;
-  padding: 8px 14px;
-  border-radius: var(--radius-full);
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   transition:
     background var(--transition-fast),
@@ -249,7 +264,9 @@ button {
 }
 
 .nav-link svg {
-  opacity: 0.8;
+  opacity: 0.75;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
 }
 
 .nav-link-active,
@@ -262,12 +279,29 @@ button {
   opacity: 1;
 }
 
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
 .app-content {
-  max-width: 1080px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 32px 24px 64px;
   flex: 1;
+  min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-content-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 36px 32px 64px;
   animation: fade-in 320ms var(--ease);
 }
 
@@ -404,8 +438,8 @@ button {
   gap: 12px;
   text-align: center;
   padding: 56px 24px;
-  background: var(--color-surface);
-  border: 1px dashed var(--border-strong);
+  background: var(--color-surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   color: var(--text-secondary);
 }
@@ -419,6 +453,7 @@ button {
   border-radius: var(--radius-full);
   background: var(--color-primary-soft);
   color: var(--color-primary);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 .empty-state-title {
@@ -451,8 +486,8 @@ button {
   white-space: nowrap;
 }
 
-.btn:active {
-  transform: translateY(1px);
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
 }
 
 .btn:disabled {
@@ -464,16 +499,21 @@ button {
 .btn-primary {
   background: var(--color-primary);
   color: var(--text-on-primary);
-  box-shadow: var(--shadow-xs);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    var(--shadow-xs);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    var(--shadow-sm);
 }
 
 .btn-primary:active:not(:disabled) {
   background: var(--color-primary-active);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
@@ -517,6 +557,7 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -761,12 +802,24 @@ button {
   padding: 18px 20px;
   transition:
     box-shadow var(--transition),
-    border-color var(--transition);
+    border-color var(--transition),
+    transform var(--transition);
 }
 
 .order-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+/* The order at the front of the queue gets a quiet accent — it's the
+   next thing whoever's delivering should grab, worth a glance of
+   emphasis without shouting. */
+.orders-list > .order-card:first-child {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--border));
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .order-card-warning {
@@ -1042,11 +1095,15 @@ button {
   padding: 18px 20px;
   transition:
     box-shadow var(--transition),
-    opacity var(--transition);
+    border-color var(--transition),
+    opacity var(--transition),
+    transform var(--transition);
 }
 
 .product-card:hover {
   box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
 }
 
 .product-card-inactive {
@@ -1192,6 +1249,20 @@ button {
   margin-bottom: 24px;
 }
 
+.stat-tile-hero {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)),
+      var(--color-surface) 65%
+    );
+  border-color: color-mix(in srgb, var(--color-primary) 16%, var(--border));
+}
+
+.stat-tile-hero .stat-tile-icon {
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
 .stat-tile-icon {
   display: inline-flex;
   align-items: center;
@@ -1261,7 +1332,69 @@ button {
   min-width: 160px;
 }
 
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-group:not(:first-child) .timeline-day-label {
+  margin-top: 8px;
+}
+
+.timeline-day-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 14px 42px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 12px;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+
+.timeline-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2.5px solid var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  flex-shrink: 0;
+}
+
+.timeline-dot-cancelled {
+  border-color: var(--text-muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-muted) 14%, transparent);
+}
+
+.timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--border);
+  margin-top: 4px;
+  border-radius: 1px;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
 .history-row {
+  flex: 1;
   padding: 14px 18px;
   display: flex;
   align-items: center;
@@ -1317,20 +1450,53 @@ button {
    Responsive
    ========================================================================== */
 
-@media (max-width: 640px) {
-  .app-header-inner {
-    padding: 12px 16px;
-    gap: 16px;
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
   }
 
-  .brand-word {
+  .app-sidebar {
+    position: fixed;
+    inset: auto 0 0 0;
+    top: auto;
+    height: auto;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .brand,
+  .sidebar-footer {
     display: none;
   }
 
-  .app-content {
-    padding: 20px 16px 48px;
+  .app-nav {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
   }
 
+  .nav-link {
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 14px;
+    font-size: 10.5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .app-content {
+    height: auto;
+  }
+
+  .app-content-inner {
+    padding: 20px 16px calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
   .order-card,
   .product-card {
     padding: 16px;

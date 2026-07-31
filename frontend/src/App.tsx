@@ -10,35 +10,36 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function App() {
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="brand">
-            <img src="/logo-fox.png" alt="" className="brand-mark" width={34} height={34} />
-            <span className="brand-word">Hielo Guala</span>
-          </div>
-          <nav className="app-nav">
-            <NavLink to="/orders" className={navLinkClass}>
-              <IconInbox width={16} height={16} />
-              <span>Pedidos</span>
-            </NavLink>
-            <NavLink to="/products" className={navLinkClass}>
-              <IconTag width={16} height={16} />
-              <span>Productos</span>
-            </NavLink>
-            <NavLink to="/metrics" className={navLinkClass}>
-              <IconTrendingUp width={16} height={16} />
-              <span>Métricas</span>
-            </NavLink>
-          </nav>
+      <aside className="app-sidebar">
+        <div className="brand">
+          <img src="/logo-fox.png" alt="" className="brand-mark" width={34} height={34} />
+          <span className="brand-word">Hielo Guala</span>
         </div>
-      </header>
+        <nav className="app-nav">
+          <NavLink to="/orders" className={navLinkClass}>
+            <IconInbox width={17} height={17} />
+            <span>Pedidos</span>
+          </NavLink>
+          <NavLink to="/products" className={navLinkClass}>
+            <IconTag width={17} height={17} />
+            <span>Productos</span>
+          </NavLink>
+          <NavLink to="/metrics" className={navLinkClass}>
+            <IconTrendingUp width={17} height={17} />
+            <span>Métricas</span>
+          </NavLink>
+        </nav>
+        <div className="sidebar-footer">Gestión de pedidos</div>
+      </aside>
       <main className="app-content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/orders" replace />} />
-          <Route path="/orders" element={<OrdersBoard />} />
-          <Route path="/products" element={<ProductsAdmin />} />
-          <Route path="/metrics" element={<SalesMetrics />} />
-        </Routes>
+        <div className="app-content-inner">
+          <Routes>
+            <Route path="/" element={<Navigate to="/orders" replace />} />
+            <Route path="/orders" element={<OrdersBoard />} />
+            <Route path="/products" element={<ProductsAdmin />} />
+            <Route path="/metrics" element={<SalesMetrics />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );

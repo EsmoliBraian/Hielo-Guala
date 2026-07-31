@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Order } from "../types/api";
 import { IconAlertTriangle, IconClock, IconInbox, IconPhone, IconX } from "./icons";
@@ -11,12 +11,21 @@ const DAY_OPTIONS = [
   { value: 90, label: "Últimos 90 días" },
 ];
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
-  day: "2-digit",
-  month: "2-digit",
+const TZ = "America/Argentina/Buenos_Aires";
+
+const TIME_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   hour: "2-digit",
   minute: "2-digit",
-  timeZone: "America/Argentina/Buenos_Aires",
+  timeZone: TZ,
+});
+
+const DAY_KEY_FORMATTER = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }); // -> YYYY-MM-DD
+
+const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: TZ,
 });
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
@@ -36,6 +45,39 @@ function itemsSummary(order: Order): string {
   const unmatchedCount = order.items.length - matched.length;
   if (unmatchedCount > 0) parts.push(`${unmatchedCount} sin reconocer`);
   return parts.join(", ") || "Sin ítems";
+}
+
+function dayKey(iso: string): string {
+  return DAY_KEY_FORMATTER.format(new Date(iso));
+}
+
+function dayLabel(key: string): string {
+  const today = dayKey(new Date().toISOString());
+  const yesterday = dayKey(new Date(Date.now() - 86_400_000).toISOString());
+  if (key === today) return "Hoy";
+  if (key === yesterday) return "Ayer";
+  const label = DAY_LABEL_FORMATTER.format(new Date(`${key}T12:00:00`));
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+interface TimelineGroup {
+  key: string;
+  label: string;
+  orders: Order[];
+}
+
+function groupByDay(orders: Order[]): TimelineGroup[] {
+  const groups: TimelineGroup[] = [];
+  for (const order of orders) {
+    const key = dayKey(order.receivedAt);
+    const current = groups[groups.length - 1];
+    if (current && current.key === key) {
+      current.orders.push(order);
+    } else {
+      groups.push({ key, label: dayLabel(key), orders: [order] });
+    }
+  }
+  return groups;
 }
 
 export function OrderHistory() {
@@ -63,6 +105,8 @@ export function OrderHistory() {
   useEffect(() => {
     loadHistory(days);
   }, [days, loadHistory]);
+
+  const groups = useMemo(() => groupByDay(orders), [orders]);
 
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
@@ -115,52 +159,69 @@ export function OrderHistory() {
             <IconInbox width={24} height={24} />
           </span>
           <span className="empty-state-title">Sin movimientos en este período</span>
+          <span>Los pedidos entregados o cancelados van a ir apareciendo acá.</span>
         </div>
       )}
 
-      {!loading && !error && orders.length > 0 && (
-        <div className="orders-list">
-          {orders.map((order) => (
-            <article key={order.id} className="card history-row">
-              <div className="history-row-main">
-                <div className="history-row-meta">
-                  <span className="order-phone">
-                    <IconPhone width={14} height={14} />
-                    {order.customerPhone}
-                  </span>
-                  <span className="order-time">
-                    <IconClock width={14} height={14} />
-                    {DATE_FORMATTER.format(new Date(order.receivedAt))}
-                  </span>
-                  <span className={`badge ${order.status === "DELIVERED" ? "badge-success" : "badge-neutral"}`}>
-                    <span className="badge-dot" />
-                    {order.status === "DELIVERED" ? "Entregado" : "Cancelado"}
-                  </span>
-                  {order.sale?.paymentMethod && (
-                    <span className="badge badge-primary">
-                      {PAYMENT_METHOD_LABELS[order.sale.paymentMethod] ?? order.sale.paymentMethod}
-                    </span>
-                  )}
+      {!loading && !error && groups.length > 0 && (
+        <div className="timeline">
+          {groups.map((group) => (
+            <div className="timeline-group" key={group.key}>
+              <div className="timeline-day-label">{group.label}</div>
+              {group.orders.map((order) => (
+                <div className="timeline-item" key={order.id}>
+                  <div className="timeline-marker">
+                    <span className={`timeline-dot${order.status === "CANCELLED" ? " timeline-dot-cancelled" : ""}`} />
+                    <span className="timeline-line" />
+                  </div>
+
+                  <article className="card history-row">
+                    <div className="history-row-main">
+                      <div className="history-row-meta">
+                        <span className="order-time">
+                          <IconClock width={13} height={13} />
+                          {TIME_FORMATTER.format(new Date(order.receivedAt))}
+                        </span>
+                        <span className="order-phone">
+                          <IconPhone width={13} height={13} />
+                          {order.customerPhone}
+                        </span>
+                        <span className={`badge ${order.status === "DELIVERED" ? "badge-success" : "badge-neutral"}`}>
+                          <span className="badge-dot" />
+                          {order.status === "DELIVERED" ? "Entregado" : "Cancelado"}
+                        </span>
+                        {order.sale?.paymentMethod && (
+                          <span className="badge badge-primary">
+                            {PAYMENT_METHOD_LABELS[order.sale.paymentMethod] ?? order.sale.paymentMethod}
+                          </span>
+                        )}
+                      </div>
+                      <p className="history-row-items">{itemsSummary(order)}</p>
+                    </div>
+                    <div className="history-row-actions">
+                      {order.sale && (
+                        <span className="history-row-total">
+                          {CURRENCY_FORMATTER.format(Number(order.sale.totalAmount))}
+                        </span>
+                      )}
+                      {order.status === "DELIVERED" && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm history-cancel-btn"
+                          onClick={() => {
+                            setCancelError(null);
+                            setCancelTarget(order);
+                          }}
+                        >
+                          <IconX width={14} height={14} />
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </article>
                 </div>
-                <p className="history-row-items">{itemsSummary(order)}</p>
-              </div>
-              <div className="history-row-actions">
-                {order.sale && <span className="history-row-total">{CURRENCY_FORMATTER.format(Number(order.sale.totalAmount))}</span>}
-                {order.status === "DELIVERED" && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm history-cancel-btn"
-                    onClick={() => {
-                      setCancelError(null);
-                      setCancelTarget(order);
-                    }}
-                  >
-                    <IconX width={14} height={14} />
-                    Cancelar
-                  </button>
-                )}
-              </div>
-            </article>
+              ))}
+            </div>
           ))}
         </div>
       )}

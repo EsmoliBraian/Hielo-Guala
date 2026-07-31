@@ -107,7 +107,7 @@ export function SalesMetrics() {
         </div>
       ) : (
         <>
-          <div className="stat-tile animate-in">
+          <div className="stat-tile stat-tile-hero animate-in">
             <span className="stat-tile-icon">
               <IconTrendingUp width={22} height={22} />
             </span>
