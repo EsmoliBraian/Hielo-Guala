@@ -73,6 +73,8 @@ Solo n8n necesita ser alcanzable por Meta desde internet (URL pública HTTPS). T
 
 ⚠️ **Antes de usarla**: es un cliente no oficial de WhatsApp (basado en ingeniería inversa de WhatsApp Web, vía [Baileys](https://github.com/WhiskeySockets/Baileys)). Meta puede banear el número si detecta patrones de envío automatizado (mucho volumen, respuestas muy rápidas y repetitivas, etc.). Para probar el flujo completo sin arriesgar tu número de negocio, usá un número de WhatsApp descartable primero.
 
+**Riesgo confirmado en la práctica (31/07/2026):** después de responder un solo pedido de prueba, WhatsApp cerró la sesión sola con `stream:error code 401, reason: conflict/device_removed` — sin que nadie tocara "Dispositivos vinculados" a mano. Es el propio WhatsApp detectando el patrón automatizado y desvinculando el dispositivo. Si se repite seguido, el siguiente paso de WhatsApp suele ser banear el número directamente. Por eso: **no reconectar con el número real del negocio sin evaluar el riesgo** — priorizar la Opción A (Meta Cloud API oficial) para producción.
+
 ### B.1 Levantar los servicios
 
 ```bash
