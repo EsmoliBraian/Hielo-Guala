@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Order } from "../types/api";
-import { IconAlertTriangle, IconClock, IconInbox, IconPhone, IconX } from "./icons";
+import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconX } from "./icons";
 import { Modal } from "./Modal";
 
 const DAY_OPTIONS = [
@@ -80,8 +80,14 @@ function groupByDay(orders: Order[]): TimelineGroup[] {
   return groups;
 }
 
-export function OrderHistory() {
+interface OrderHistoryProps {
+  /** Scopes the history to a single customer's orders (used by the customer detail view). */
+  customerId?: string;
+}
+
+export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
   const [days, setDays] = useState(7);
+  const [selectedDate, setSelectedDate] = useState(""); // YYYY-MM-DD, empty = use `days` instead
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,22 +95,30 @@ export function OrderHistory() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const loadHistory = useCallback(async (forDays: number) => {
-    setLoading(true);
-    try {
-      const data = await api.get<Order[]>(`/orders/history?days=${forDays}`);
-      setOrders(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando el historial");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadHistory = useCallback(
+    async (forDays: number, forDate: string) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (forDate) params.set("date", forDate);
+        else params.set("days", String(forDays));
+        if (customerId) params.set("customerId", customerId);
+
+        const data = await api.get<Order[]>(`/orders/history?${params}`);
+        setOrders(data);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error cargando el historial");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [customerId],
+  );
 
   useEffect(() => {
-    loadHistory(days);
-  }, [days, loadHistory]);
+    loadHistory(days, selectedDate);
+  }, [days, selectedDate, loadHistory]);
 
   const groups = useMemo(() => groupByDay(orders), [orders]);
 
@@ -115,7 +129,7 @@ export function OrderHistory() {
     try {
       await api.patch(`/orders/${cancelTarget.id}/cancel`);
       setCancelTarget(null);
-      await loadHistory(days);
+      await loadHistory(days, selectedDate);
     } catch (err) {
       setCancelError(err instanceof Error ? err.message : "No se pudo cancelar el pedido");
     } finally {
@@ -130,13 +144,38 @@ export function OrderHistory() {
           <h1>Historial</h1>
           <p className="page-subtitle">Pedidos entregados o cancelados</p>
         </div>
-        <select className="select history-days-select" value={days} onChange={(e) => setDays(Number(e.target.value))}>
-          {DAY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="history-filters">
+          <select
+            className="select history-days-select"
+            value={days}
+            disabled={Boolean(selectedDate)}
+            onChange={(e) => setDays(Number(e.target.value))}
+          >
+            {DAY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            className="input history-date-input"
+            value={selectedDate}
+            max={dayKey(new Date().toISOString())}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            aria-label="Buscar por fecha específica"
+          />
+          {selectedDate && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setSelectedDate("")}
+              aria-label="Quitar filtro de fecha"
+            >
+              <IconX width={14} height={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && (
@@ -186,6 +225,12 @@ export function OrderHistory() {
                           <IconPhone width={13} height={13} />
                           {order.customerPhone}
                         </span>
+                        {order.deliveryAddress && (
+                          <span className="order-address" title={order.deliveryAddress}>
+                            <IconMapPin width={13} height={13} />
+                            {order.deliveryAddress}
+                          </span>
+                        )}
                         <span className={`badge ${order.status === "DELIVERED" ? "badge-success" : "badge-neutral"}`}>
                           <span className="badge-dot" />
                           {order.status === "DELIVERED" ? "Entregado" : "Cancelado"}

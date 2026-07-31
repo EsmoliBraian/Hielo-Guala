@@ -26,6 +26,11 @@ const createManualOrderSchema = z.object({
 
 const historyQuerySchema = z.object({
   days: z.coerce.number().int().positive().max(365).default(7),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido")
+    .optional(),
+  customerId: z.string().optional(),
 });
 
 ordersRouter.get(
@@ -48,8 +53,8 @@ ordersRouter.post(
 ordersRouter.get(
   "/history",
   asyncHandler(async (req, res) => {
-    const { days } = historyQuerySchema.parse(req.query);
-    res.json(await ordersService.listOrderHistory(days));
+    const { days, date, customerId } = historyQuerySchema.parse(req.query);
+    res.json(await ordersService.listOrderHistory({ days, date, customerId }));
   }),
 );
 

@@ -43,21 +43,49 @@ model ProductAlias {
 }
 
 model Order {
-  id             String      @id @default(cuid())
-  customerPhone  String
-  rawMessage     String
-  receivedAt     DateTime
-  status         OrderStatus @default(PENDING)
-  botAnswered    Boolean     @default(false)
-  botAnswerError String?
-  waMessageId    String?     @unique
-  deliveredAt    DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  items          OrderItem[]
-  sale           Sale?
+  id                 String      @id @default(cuid())
+  customerPhone      String
+  rawMessage         String
+  receivedAt         DateTime
+  status             OrderStatus @default(PENDING)
+  botAnswered        Boolean     @default(false)
+  botAnswerError     String?
+  waMessageId        String?     @unique
+  deliveredAt        DateTime?
+  deliveryAddress    String?
+  /// Set when the bot asks for the delivery address; the next WhatsApp
+  /// message from the same phone is treated as the answer instead of a new order.
+  addressRequestedAt DateTime?
+  customerId         String?
+  customer           Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  items              OrderItem[]
+  sale               Sale?
 
   @@index([status, receivedAt])
+  @@index([customerPhone, receivedAt])
+  @@index([customerId])
+}
+
+model Customer {
+  id        String          @id @default(cuid())
+  name      String
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  phones    CustomerPhone[]
+  orders    Order[]
+}
+
+model CustomerPhone {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  phone      String   @unique
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
 }
 
 model OrderItem {

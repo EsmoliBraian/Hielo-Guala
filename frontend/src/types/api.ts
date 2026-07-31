@@ -37,9 +37,43 @@ export interface Order {
   /** null for orders entered manually (no WhatsApp message behind them). */
   waMessageId: string | null;
   deliveredAt: string | null;
+  deliveryAddress: string | null;
+  /** Set once the bot asked for the address; null again once the customer answers. */
+  addressRequestedAt: string | null;
+  customerId: string | null;
   items: OrderItem[];
   /** Only present on history rows (from GET /orders/history); items omitted there. */
   sale?: Pick<Sale, "id" | "totalAmount" | "paymentMethod" | "deliveredAt"> | null;
+}
+
+export interface CustomerPhone {
+  id: string;
+  customerId: string;
+  phone: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  notes: string | null;
+  createdAt: string;
+  phones: CustomerPhone[];
+  orderCount: number;
+  totalSpent: number;
+}
+
+export interface CustomerDetail {
+  customer: Omit<Customer, "orderCount" | "totalSpent">;
+  summary: {
+    orderCount: number;
+    deliveredCount: number;
+    cancelledCount: number;
+    totalSpent: number;
+    lastOrderAt: string | null;
+    byProduct: { productName: string; quantity: number }[];
+    byPaymentMethod: { paymentMethod: string; revenue: number }[];
+  };
+  orders: Order[];
 }
 
 export interface SaleItem {

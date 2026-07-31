@@ -22,13 +22,15 @@ whatsappRouter.post(
   "/orders",
   asyncHandler(async (req, res) => {
     const data = incomingOrderSchema.parse(req.body);
-    const order = await ordersService.createOrderFromWhatsapp(data);
+    const { order, replyText, addressCaptured } = await ordersService.createOrderFromWhatsapp(data);
     const unmatchedCount = order.items.filter((item) => !item.matched).length;
 
     res.status(201).json({
       orderId: order.id,
       items: order.items,
       unmatchedCount,
+      replyText,
+      addressCaptured,
     });
   }),
 );

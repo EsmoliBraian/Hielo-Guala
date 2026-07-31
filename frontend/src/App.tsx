@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { IconInbox, IconTag, IconTrendingUp } from "./components/icons";
+import { IconInbox, IconTag, IconTrendingUp, IconUsers } from "./components/icons";
+import { CustomersPage } from "./pages/CustomersPage";
 import { OrdersBoard } from "./pages/OrdersBoard";
 import { ProductsAdmin } from "./pages/ProductsAdmin";
 import { SalesMetrics } from "./pages/SalesMetrics";
@@ -24,6 +25,10 @@ export function App() {
             <IconTag width={17} height={17} />
             <span>Productos</span>
           </NavLink>
+          <NavLink to="/customers" className={navLinkClass}>
+            <IconUsers width={17} height={17} />
+            <span>Clientes</span>
+          </NavLink>
           <NavLink to="/metrics" className={navLinkClass}>
             <IconTrendingUp width={17} height={17} />
             <span>Métricas</span>
@@ -37,6 +42,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/orders" replace />} />
             <Route path="/orders" element={<OrdersBoard />} />
             <Route path="/products" element={<ProductsAdmin />} />
+            <Route path="/customers" element={<CustomersPage />} />
             <Route path="/metrics" element={<SalesMetrics />} />
           </Routes>
         </div>

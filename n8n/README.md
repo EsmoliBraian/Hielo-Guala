@@ -43,8 +43,8 @@ Las dos usan el mismo backend sin ningún cambio — solo cambia cómo el mensaj
 2. **IF**: ¿existe `body.entry[0].changes[0].value.messages`?
 3. Rama falsa → NoOp
 4. Rama verdadera → **Edit Fields (Set)**: extraer `customerPhone`, `rawMessage`, `waMessageId`, `receivedAt`
-5. **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders`
-6. **Edit Fields (Set)**: armar el texto de confirmación
+5. **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders` (el backend arma el texto de la respuesta — incluye el pedido confirmado y, si corresponde, la pregunta por la dirección de entrega — y lo devuelve en `replyText`)
+6. **Edit Fields (Set)**: toma `replyText` tal cual del paso anterior
 7. **HTTP Request** → `POST https://graph.facebook.com/v20.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages` (header `Authorization: Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}`). **"On Error" = "Continue"** en la pestaña Settings del nodo (no dentro de Parameters — ahí no lo respeta).
 8. **IF**: `{{$json.error !== undefined}}`
 9. Rama falsa (OK) → **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders/{orderId}/bot-answered` con `{"success": true}`
@@ -115,8 +115,8 @@ El webhook ya queda configurado automáticamente hacia n8n (`WEBHOOK_GLOBAL_URL`
 2. **IF**: `{{$json.body.event === 'messages.upsert' && $json.body.data?.key?.fromMe === false && Boolean($json.body.data?.message)}}` — filtra eventos que no son un mensaje nuevo entrante (ej. mensajes que mandamos nosotros mismos, que también llegan por el mismo webhook)
 3. Rama falsa → NoOp
 4. Rama verdadera → **Edit Fields (Set)**: `customerPhone` (de `data.key.remoteJid`, sacando el sufijo `@s.whatsapp.net`), `rawMessage`, `waMessageId`, `receivedAt`
-5. **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders` (idéntico a la Opción A — el backend no sabe ni le importa qué proveedor de WhatsApp se usó)
-6. **Edit Fields (Set)**: armar el texto de confirmación
+5. **HTTP Request** → `POST {{$env.BACKEND_URL}}/api/whatsapp/orders` (idéntico a la Opción A — el backend no sabe ni le importa qué proveedor de WhatsApp se usó, y ya devuelve `replyText` armado)
+6. **Edit Fields (Set)**: toma `replyText` tal cual del paso anterior
 7. **HTTP Request** → `POST {{$env.EVOLUTION_API_URL}}/message/sendText/{{$env.EVOLUTION_INSTANCE_NAME}}` (header `apikey: {{$env.EVOLUTION_API_KEY}}`), body `{"number": "...", "text": "..."}`. **"On Error" = "Continue"** en Settings del nodo.
 8. **IF**: `{{$json.error !== undefined}}`
 9. Rama falsa (OK) → confirma `bot-answered` con `{"success": true}`

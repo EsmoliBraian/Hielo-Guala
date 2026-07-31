@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Order, PaymentMethod } from "../types/api";
-import { IconBankTransfer, IconCash, IconClock, IconPhone } from "./icons";
+import { IconBankTransfer, IconCash, IconClock, IconMapPin, IconPhone } from "./icons";
 import { Modal } from "./Modal";
 import { OrderItemsList } from "./OrderItemsList";
 
@@ -58,10 +58,22 @@ export function OrderCard({ order, position, onDeliver }: OrderCardProps) {
           <IconPhone width={15} height={15} />
           {order.customerPhone}
         </span>
+        {order.deliveryAddress && (
+          <span className="order-address" title={order.deliveryAddress}>
+            <IconMapPin width={15} height={15} />
+            {order.deliveryAddress}
+          </span>
+        )}
         <span className="order-time">
           <IconClock width={15} height={15} />
           {TIME_FORMATTER.format(new Date(order.receivedAt))}
         </span>
+        {!order.deliveryAddress && order.addressRequestedAt && (
+          <span className="badge badge-warning">
+            <span className="badge-dot" />
+            Esperando dirección
+          </span>
+        )}
         {order.waMessageId === null ? (
           <span className="badge badge-primary">
             <span className="badge-dot" />

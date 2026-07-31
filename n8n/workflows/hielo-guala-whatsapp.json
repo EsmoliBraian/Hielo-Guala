@@ -160,7 +160,7 @@
               "id": "replyText",
               "name": "replyText",
               "type": "string",
-              "value": "={{ (() => { const matched = ($json.items || []).filter(i => i.matched); const base = matched.length ? 'Pedido recibido: ' + matched.map(i => i.quantity + 'x ' + (i.product ? i.product.name : 'producto')).join(', ') + '. ¡Gracias!' : 'Recibimos tu mensaje pero no pudimos identificar los productos.'; const extra = ($json.unmatchedCount || 0) > 0 ? ' Una parte del pedido no la entendimos, en breve te lo confirmamos.' : ''; return base + extra; })() }}"
+              "value": "={{$json.replyText}}"
             },
             {
               "id": "customerPhone",

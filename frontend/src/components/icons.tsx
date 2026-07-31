@@ -136,6 +136,36 @@ export function IconInbox(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconMapPin(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M19 10.5c0 5.5-7 11-7 11s-7-5.5-7-11a7 7 0 1 1 14 0Z" />
+      <circle cx="12" cy="10.5" r="2.5" />
+    </svg>
+  );
+}
+
+export function IconUsers(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.8 19c.6-3.2 3-5 6.2-5s5.6 1.8 6.2 5" />
+      <path d="M15.5 5.2a3.2 3.2 0 0 1 0 6" />
+      <path d="M21.2 19c-.4-2.4-1.7-4-3.7-4.7" />
+    </svg>
+  );
+}
+
+export function IconCalendar(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
 export function IconRefresh(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)}>
