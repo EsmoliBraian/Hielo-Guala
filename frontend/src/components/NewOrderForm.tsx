@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { Product } from "../types/api";
+import type { Customer, Product } from "../types/api";
+import { CustomerForm } from "./CustomerForm";
+import { CustomerPicker } from "./CustomerPicker";
 import { IconPlus, IconX } from "./icons";
 
 interface LineItem {
@@ -17,13 +19,16 @@ interface NewOrderFormProps {
 
 export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerId, setCustomerId] = useState("");
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [lines, setLines] = useState<LineItem[]>([{ productId: "", quantity: "1" }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<Product[]>("/products").then(setProducts);
+    api.get<Customer[]>("/customers").then(setCustomers);
   }, []);
 
   function updateLine(index: number, patch: Partial<LineItem>) {
@@ -57,7 +62,7 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
     setSubmitting(true);
     setError(null);
     try {
-      await api.post("/orders", { customerPhone: customerPhone.trim() || undefined, items });
+      await api.post("/orders", { customerId: customerId || undefined, items });
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear el pedido");
@@ -67,18 +72,18 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
   }
 
   return (
+    <>
     <form className="card new-order-form animate-in" onSubmit={handleSubmit}>
       <div className="field">
-        <label className="field-label" htmlFor="new-order-phone">
-          Cliente (opcional)
+        <label className="field-label" htmlFor="new-order-customer">
+          Cliente
         </label>
-        <input
-          id="new-order-phone"
-          type="text"
-          className="input"
-          placeholder="Nombre o teléfono — vacío = Mostrador"
-          value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
+        <CustomerPicker
+          id="new-order-customer"
+          customers={customers}
+          value={customerId}
+          onChange={setCustomerId}
+          onRequestCreate={() => setShowCustomerForm(true)}
         />
       </div>
 
@@ -134,5 +139,17 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
         </button>
       </div>
     </form>
+
+    {showCustomerForm && (
+      <CustomerForm
+        onClose={() => setShowCustomerForm(false)}
+        onSaved={(customer) => {
+          setShowCustomerForm(false);
+          setCustomers((prev) => [...prev, { ...customer, orderCount: 0, totalSpent: 0 }]);
+          setCustomerId(customer.id);
+        }}
+      />
+    )}
+    </>
   );
 }

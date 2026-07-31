@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { CustomerForm } from "../components/CustomerForm";
 import { OrderHistory } from "../components/OrderHistory";
@@ -44,14 +44,30 @@ const PAYMENT_METHOD_ICONS: Record<string, typeof IconCash> = {
 function CustomerDetailPanel({ customerId }: { customerId: string }) {
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settlingId, setSettlingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setDetail(await api.get<CustomerDetail>(`/customers/${customerId}`));
+    } finally {
+      setLoading(false);
+    }
+  }, [customerId]);
 
   useEffect(() => {
-    setLoading(true);
-    api
-      .get<CustomerDetail>(`/customers/${customerId}`)
-      .then(setDetail)
-      .finally(() => setLoading(false));
-  }, [customerId]);
+    load();
+  }, [load]);
+
+  async function handleSettleDebt(orderId: string) {
+    setSettlingId(orderId);
+    try {
+      await api.patch(`/orders/${orderId}/settle-debt`);
+      await load();
+    } finally {
+      setSettlingId(null);
+    }
+  }
 
   if (loading || !detail) {
     return (
@@ -63,9 +79,34 @@ function CustomerDetailPanel({ customerId }: { customerId: string }) {
   }
 
   const { summary } = detail;
+  const pendingDebts = detail.orders.filter((order) => order.sale?.paymentMethod === "DEBT" && !order.sale.debtSettledAt);
 
   return (
     <div className="customer-detail animate-in">
+      {pendingDebts.length > 0 && (
+        <div className="customer-debts">
+          <h4>Deudas pendientes</h4>
+          <ul className="customer-debts-list">
+            {pendingDebts.map((order) => (
+              <li key={order.id} className="customer-debt-row">
+                <div className="customer-debt-info">
+                  <span className="customer-debt-amount">{CURRENCY_FORMATTER.format(Number(order.sale!.totalAmount))}</span>
+                  <span className="customer-debt-date">{DATE_FORMATTER.format(new Date(order.receivedAt))}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleSettleDebt(order.id)}
+                  disabled={settlingId === order.id}
+                >
+                  {settlingId === order.id ? "Guardando..." : "Marcar como pagada"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="stat-tile-row">
         <div className="stat-tile stat-tile-sm">
           <span className="stat-tile-icon">
@@ -87,6 +128,17 @@ function CustomerDetailPanel({ customerId }: { customerId: string }) {
             </div>
           </div>
         </div>
+        {summary.pendingDebt > 0 && (
+          <div className="stat-tile stat-tile-sm stat-tile-debt">
+            <span className="stat-tile-icon">
+              <IconAlertTriangle width={18} height={18} />
+            </span>
+            <div>
+              <div className="stat-tile-label">Deuda pendiente</div>
+              <div className="stat-tile-value stat-tile-value-sm">{CURRENCY_FORMATTER.format(summary.pendingDebt)}</div>
+            </div>
+          </div>
+        )}
         {summary.lastOrderAt && (
           <div className="stat-tile stat-tile-sm">
             <span className="stat-tile-icon">

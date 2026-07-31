@@ -166,6 +166,26 @@ export function IconCalendar(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconClipboardList(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3.5h6a1 1 0 0 1 1 1V6H8V4.5a1 1 0 0 1 1-1Z" />
+      <path d="M8.5 11h7M8.5 14.5h7M8.5 18h4" />
+    </svg>
+  );
+}
+
+export function IconPercent(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="m6 18 12-12" />
+      <circle cx="7.5" cy="7.5" r="2" />
+      <circle cx="16.5" cy="16.5" r="2" />
+    </svg>
+  );
+}
+
 export function IconRefresh(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)}>

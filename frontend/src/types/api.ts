@@ -1,5 +1,6 @@
 export type OrderStatus = "PENDING" | "DELIVERED" | "CANCELLED";
-export type PaymentMethod = "CASH" | "TRANSFER";
+export type PaymentMethod = "CASH" | "TRANSFER" | "DEBT";
+export type DiscountType = "FIXED" | "PERCENTAGE";
 
 export interface Product {
   id: string;
@@ -43,7 +44,10 @@ export interface Order {
   customerId: string | null;
   items: OrderItem[];
   /** Only present on history rows (from GET /orders/history); items omitted there. */
-  sale?: Pick<Sale, "id" | "totalAmount" | "paymentMethod" | "deliveredAt"> | null;
+  sale?: Pick<
+    Sale,
+    "id" | "totalAmount" | "subtotalAmount" | "discountType" | "discountValue" | "paymentMethod" | "deliveredAt" | "debtSettledAt"
+  > | null;
 }
 
 export interface CustomerPhone {
@@ -52,23 +56,28 @@ export interface CustomerPhone {
   phone: string;
 }
 
-export interface Customer {
+/** Shape returned as-is by create/update — no aggregated stats (those only come from GET /customers). */
+export interface CustomerRecord {
   id: string;
   name: string;
   notes: string | null;
   createdAt: string;
   phones: CustomerPhone[];
+}
+
+export interface Customer extends CustomerRecord {
   orderCount: number;
   totalSpent: number;
 }
 
 export interface CustomerDetail {
-  customer: Omit<Customer, "orderCount" | "totalSpent">;
+  customer: CustomerRecord;
   summary: {
     orderCount: number;
     deliveredCount: number;
     cancelledCount: number;
     totalSpent: number;
+    pendingDebt: number;
     lastOrderAt: string | null;
     byProduct: { productName: string; quantity: number }[];
     byPaymentMethod: { paymentMethod: string; revenue: number }[];
@@ -90,7 +99,12 @@ export interface Sale {
   orderId: string;
   deliveredAt: string;
   totalAmount: string;
+  subtotalAmount: string | null;
+  discountType: DiscountType | null;
+  discountValue: string | null;
   paymentMethod: PaymentMethod | null;
+  /** Only meaningful when paymentMethod is DEBT. Null while still unpaid. */
+  debtSettledAt: string | null;
   items: SaleItem[];
 }
 

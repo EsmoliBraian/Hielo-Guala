@@ -148,6 +148,10 @@ export async function getCustomerDetail(id: string) {
     byPaymentMethodMap.set(key, (byPaymentMethodMap.get(key) ?? 0) + Number(order.sale?.totalAmount ?? 0));
   }
 
+  const pendingDebt = delivered
+    .filter((order) => order.sale?.paymentMethod === "DEBT" && !order.sale.debtSettledAt)
+    .reduce((sum, order) => sum + Number(order.sale!.totalAmount), 0);
+
   return {
     customer,
     summary: {
@@ -155,6 +159,7 @@ export async function getCustomerDetail(id: string) {
       deliveredCount: delivered.length,
       cancelledCount: cancelled.length,
       totalSpent,
+      pendingDebt,
       lastOrderAt: orders[0]?.receivedAt ?? null,
       byProduct: Array.from(byProductMap.values()).sort((a, b) => b.quantity - a.quantity),
       byPaymentMethod: Array.from(byPaymentMethodMap.entries()).map(([paymentMethod, revenue]) => ({

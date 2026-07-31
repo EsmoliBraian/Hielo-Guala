@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { Customer } from "../types/api";
+import type { Customer, CustomerRecord } from "../types/api";
 import { IconPlus, IconX } from "./icons";
 import { Modal } from "./Modal";
 
 interface CustomerFormProps {
   customer?: Customer;
-  onSaved: () => void;
+  onSaved: (customer: CustomerRecord) => void;
   onClose: () => void;
 }
 
@@ -47,12 +47,10 @@ export function CustomerForm({ customer, onSaved, onClose }: CustomerFormProps) 
     setError(null);
     try {
       const payload = { name: name.trim(), notes: notes.trim() || null, phones: cleanPhones };
-      if (customer) {
-        await api.patch(`/customers/${customer.id}`, payload);
-      } else {
-        await api.post("/customers", payload);
-      }
-      onSaved();
+      const saved = customer
+        ? await api.patch<CustomerRecord>(`/customers/${customer.id}`, payload)
+        : await api.post<CustomerRecord>("/customers", payload);
+      onSaved(saved);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el cliente");
     } finally {

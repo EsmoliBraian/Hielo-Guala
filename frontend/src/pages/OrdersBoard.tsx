@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
-import { OrderCard } from "../components/OrderCard";
+import { OrderCard, type DeliverPayload } from "../components/OrderCard";
 import { IconAlertTriangle, IconInbox, IconPlus } from "../components/icons";
 import { NewOrderForm } from "../components/NewOrderForm";
 import { OrderHistory } from "../components/OrderHistory";
-import type { Order, PaymentMethod } from "../types/api";
+import type { Order } from "../types/api";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -43,9 +43,13 @@ export function OrdersBoard() {
     return () => clearInterval(interval);
   }, [loadOrders]);
 
-  async function handleDeliver(orderId: string, paymentMethod: PaymentMethod) {
-    await api.patch(`/orders/${orderId}/deliver`, { paymentMethod });
+  async function handleDeliver(orderId: string, payload: DeliverPayload) {
+    await api.patch(`/orders/${orderId}/deliver`, payload);
     setOrders((prev) => prev.filter((order) => order.id !== orderId));
+  }
+
+  function handleCustomerLinked(updated: Order) {
+    setOrders((prev) => prev.map((order) => (order.id === updated.id ? updated : order)));
   }
 
   async function handleOrderCreated() {
@@ -109,7 +113,13 @@ export function OrdersBoard() {
       {!loading && !error && orders.length > 0 && (
         <div className="orders-list">
           {orders.map((order, index) => (
-            <OrderCard key={order.id} order={order} position={index + 1} onDeliver={handleDeliver} />
+            <OrderCard
+              key={order.id}
+              order={order}
+              position={index + 1}
+              onDeliver={handleDeliver}
+              onCustomerLinked={handleCustomerLinked}
+            />
           ))}
         </div>
       )}

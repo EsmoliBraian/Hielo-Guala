@@ -17,6 +17,12 @@ enum OrderStatus {
 enum PaymentMethod {
   CASH
   TRANSFER
+  DEBT
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
 }
 
 model Product {
@@ -102,15 +108,22 @@ model OrderItem {
 }
 
 model Sale {
-  id            String         @id @default(cuid())
-  orderId       String         @unique
-  order         Order          @relation(fields: [orderId], references: [id])
-  deliveredAt   DateTime       @default(now())
-  totalAmount   Decimal        @db.Decimal(10, 2)
+  id             String         @id @default(cuid())
+  orderId        String         @unique
+  order          Order          @relation(fields: [orderId], references: [id])
+  deliveredAt    DateTime       @default(now())
+  /// Final amount actually owed/charged, after any discount.
+  totalAmount    Decimal        @db.Decimal(10, 2)
+  /// Pre-discount sum of line items. Null = no discount was tracked (legacy sale or no discount applied).
+  subtotalAmount Decimal?       @db.Decimal(10, 2)
+  discountType   DiscountType?
+  discountValue  Decimal?       @db.Decimal(10, 2)
   /// Null for sales delivered before this field existed.
-  paymentMethod PaymentMethod?
-  createdAt     DateTime       @default(now())
-  items         SaleItem[]
+  paymentMethod  PaymentMethod?
+  /// Only meaningful when paymentMethod = DEBT. Null while the debt is still unpaid.
+  debtSettledAt  DateTime?
+  createdAt      DateTime       @default(now())
+  items          SaleItem[]
 }
 
 model SaleItem {

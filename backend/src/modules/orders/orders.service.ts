@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentMethod, Prisma } from "@prisma/client";
+import { DiscountType, OrderStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { normalizePhone } from "../../lib/phone.js";
@@ -135,7 +135,7 @@ export async function createOrderFromWhatsapp(
 }
 
 interface CreateManualOrderInput {
-  customerPhone?: string;
+  customerId?: string;
   items: { productId: string; quantity: number }[];
 }
 
@@ -154,8 +154,17 @@ export async function createManualOrder(input: CreateManualOrderInput) {
   const missing = input.items.find((item) => !productById.has(item.productId));
   if (missing) throw new HttpError(404, `Producto no encontrado: ${missing.productId}`);
 
-  const customerPhone = input.customerPhone?.trim() ? normalizePhone(input.customerPhone) : "Mostrador";
-  const customerId = await findCustomerIdByPhone(customerPhone);
+  let customerPhone = "Mostrador";
+  let customerId: string | null = null;
+  if (input.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: input.customerId },
+      include: { phones: true },
+    });
+    if (!customer) throw new HttpError(404, "Cliente no encontrado");
+    customerId = customer.id;
+    customerPhone = customer.phones[0]?.phone ?? "Mostrador";
+  }
 
   return prisma.order.create({
     data: {
@@ -173,6 +182,22 @@ export async function createManualOrder(input: CreateManualOrderInput) {
       },
     },
     include: { items: { include: { product: true } } },
+  });
+}
+
+/** Links an order (typically a WhatsApp order that arrived from an unknown phone) to a customer. */
+export async function assignCustomer(orderId: string, customerId: string) {
+  const [order, customer] = await Promise.all([
+    prisma.order.findUnique({ where: { id: orderId } }),
+    prisma.customer.findUnique({ where: { id: customerId } }),
+  ]);
+  if (!order) throw new HttpError(404, "Pedido no encontrado");
+  if (!customer) throw new HttpError(404, "Cliente no encontrado");
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { customerId },
+    include: { items: { include: { product: true } }, sale: true },
   });
 }
 
@@ -244,12 +269,19 @@ export function getOrder(id: string) {
   });
 }
 
+interface DeliverOrderInput {
+  paymentMethod: PaymentMethod;
+  discount?: { type: DiscountType; value: number } | null;
+  /** Links (or overrides) the customer at delivery time — required when paymentMethod is DEBT and the order has no customer yet. */
+  customerId?: string | null;
+}
+
 /**
  * Marks an order as delivered and snapshots a Sale + SaleItems from current
  * product prices, so future price changes never distort historical metrics.
  * Guarded in a transaction against double-delivery races.
  */
-export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
+export async function deliverOrder(id: string, input: DeliverOrderInput) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id },
@@ -258,6 +290,15 @@ export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
     if (!order) throw new HttpError(404, "Pedido no encontrado");
     if (order.status !== OrderStatus.PENDING) {
       throw new HttpError(409, "El pedido ya fue entregado o cancelado");
+    }
+
+    const customerId = input.customerId !== undefined ? input.customerId : order.customerId;
+    if (input.paymentMethod === PaymentMethod.DEBT && !customerId) {
+      throw new HttpError(400, "Para cargar una deuda pendiente hay que vincular un cliente");
+    }
+    if (customerId && customerId !== order.customerId) {
+      const customer = await tx.customer.findUnique({ where: { id: customerId } });
+      if (!customer) throw new HttpError(404, "Cliente no encontrado");
     }
 
     const saleItemsData = order.items
@@ -273,11 +314,25 @@ export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
         };
       });
 
-    const totalAmount = saleItemsData.reduce(
+    const subtotalAmount = saleItemsData.reduce(
       (sum, item) => sum.add(item.lineTotal),
       new Prisma.Decimal(0),
     );
 
+    let discountType: DiscountType | null = null;
+    let discountValue: Prisma.Decimal | null = null;
+    let discountAmount = new Prisma.Decimal(0);
+    if (input.discount && input.discount.value > 0) {
+      discountType = input.discount.type;
+      discountValue = new Prisma.Decimal(input.discount.value);
+      discountAmount =
+        discountType === DiscountType.PERCENTAGE
+          ? subtotalAmount.mul(discountValue).div(100)
+          : discountValue;
+      if (discountAmount.greaterThan(subtotalAmount)) discountAmount = subtotalAmount;
+    }
+
+    const totalAmount = subtotalAmount.sub(discountAmount);
     const deliveredAt = new Date();
 
     const sale = await tx.sale.create({
@@ -285,7 +340,10 @@ export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
         orderId: id,
         deliveredAt,
         totalAmount,
-        paymentMethod,
+        subtotalAmount,
+        discountType,
+        discountValue,
+        paymentMethod: input.paymentMethod,
         items: { create: saleItemsData },
       },
       include: { items: true },
@@ -293,12 +351,25 @@ export async function deliverOrder(id: string, paymentMethod: PaymentMethod) {
 
     const updatedOrder = await tx.order.update({
       where: { id },
-      data: { status: OrderStatus.DELIVERED, deliveredAt },
+      data: { status: OrderStatus.DELIVERED, deliveredAt, customerId },
       include: { items: { include: { product: true } } },
     });
 
     return { order: updatedOrder, sale };
   });
+}
+
+/** Marks a DEBT sale as paid off. */
+export async function settleDebt(orderId: string) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { sale: true } });
+  if (!order || !order.sale) throw new HttpError(404, "Venta no encontrada");
+  if (order.sale.paymentMethod !== PaymentMethod.DEBT) {
+    throw new HttpError(409, "Esta venta no es una deuda pendiente");
+  }
+  if (order.sale.debtSettledAt) throw new HttpError(409, "La deuda ya estaba saldada");
+
+  await prisma.sale.update({ where: { id: order.sale.id }, data: { debtSettledAt: new Date() } });
+  return getOrder(orderId);
 }
 
 /**

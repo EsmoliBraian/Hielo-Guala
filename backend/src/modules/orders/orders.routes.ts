@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentMethod } from "@prisma/client";
+import { DiscountType, OrderStatus, PaymentMethod } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { asyncHandler, HttpError } from "../../middleware/errorHandler.js";
@@ -10,10 +10,22 @@ const statusQuerySchema = z.nativeEnum(OrderStatus).default(OrderStatus.PENDING)
 
 const deliverOrderSchema = z.object({
   paymentMethod: z.nativeEnum(PaymentMethod),
+  discount: z
+    .object({
+      type: z.nativeEnum(DiscountType),
+      value: z.number().positive(),
+    })
+    .optional()
+    .nullable(),
+  customerId: z.string().min(1).optional().nullable(),
+});
+
+const assignCustomerSchema = z.object({
+  customerId: z.string().min(1),
 });
 
 const createManualOrderSchema = z.object({
-  customerPhone: z.string().trim().optional(),
+  customerId: z.string().min(1).optional(),
   items: z
     .array(
       z.object({
@@ -70,8 +82,8 @@ ordersRouter.get(
 ordersRouter.patch(
   "/:id/deliver",
   asyncHandler(async (req, res) => {
-    const { paymentMethod } = deliverOrderSchema.parse(req.body);
-    res.json(await ordersService.deliverOrder(req.params.id, paymentMethod));
+    const data = deliverOrderSchema.parse(req.body);
+    res.json(await ordersService.deliverOrder(req.params.id, data));
   }),
 );
 
@@ -79,5 +91,20 @@ ordersRouter.patch(
   "/:id/cancel",
   asyncHandler(async (req, res) => {
     res.json(await ordersService.cancelOrder(req.params.id));
+  }),
+);
+
+ordersRouter.patch(
+  "/:id/customer",
+  asyncHandler(async (req, res) => {
+    const { customerId } = assignCustomerSchema.parse(req.body);
+    res.json(await ordersService.assignCustomer(req.params.id, customerId));
+  }),
+);
+
+ordersRouter.patch(
+  "/:id/settle-debt",
+  asyncHandler(async (req, res) => {
+    res.json(await ordersService.settleDebt(req.params.id));
   }),
 );

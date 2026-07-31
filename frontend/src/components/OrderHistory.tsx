@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Order } from "../types/api";
+import { CustomerLinkButton } from "./CustomerLinkButton";
 import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconX } from "./icons";
 import { Modal } from "./Modal";
 
@@ -38,6 +39,13 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   TRANSFER: "Transferencia",
 };
+
+function discountLabel(order: Order): string | null {
+  if (!order.sale?.discountType || !order.sale.discountValue) return null;
+  return order.sale.discountType === "PERCENTAGE"
+    ? `-${order.sale.discountValue}%`
+    : `-${CURRENCY_FORMATTER.format(Number(order.sale.discountValue))}`;
+}
 
 function itemsSummary(order: Order): string {
   const matched = order.items.filter((item) => item.matched);
@@ -121,6 +129,10 @@ export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
   }, [days, selectedDate, loadHistory]);
 
   const groups = useMemo(() => groupByDay(orders), [orders]);
+
+  function handleCustomerLinked(updated: Order) {
+    setOrders((prev) => prev.map((order) => (order.id === updated.id ? updated : order)));
+  }
 
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
@@ -235,11 +247,17 @@ export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
                           <span className="badge-dot" />
                           {order.status === "DELIVERED" ? "Entregado" : "Cancelado"}
                         </span>
-                        {order.sale?.paymentMethod && (
-                          <span className="badge badge-primary">
-                            {PAYMENT_METHOD_LABELS[order.sale.paymentMethod] ?? order.sale.paymentMethod}
-                          </span>
-                        )}
+                        {order.sale?.paymentMethod &&
+                          (order.sale.paymentMethod === "DEBT" ? (
+                            <span className={`badge ${order.sale.debtSettledAt ? "badge-neutral" : "badge-warning"}`}>
+                              {order.sale.debtSettledAt ? "Deuda pagada" : "Deuda pendiente"}
+                            </span>
+                          ) : (
+                            <span className="badge badge-primary">
+                              {PAYMENT_METHOD_LABELS[order.sale.paymentMethod] ?? order.sale.paymentMethod}
+                            </span>
+                          ))}
+                        {discountLabel(order) && <span className="badge badge-neutral">{discountLabel(order)}</span>}
                       </div>
                       <p className="history-row-items">{itemsSummary(order)}</p>
                     </div>
@@ -249,6 +267,7 @@ export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
                           {CURRENCY_FORMATTER.format(Number(order.sale.totalAmount))}
                         </span>
                       )}
+                      <CustomerLinkButton order={order} onLinked={handleCustomerLinked} />
                       {order.status === "DELIVERED" && (
                         <button
                           type="button"
