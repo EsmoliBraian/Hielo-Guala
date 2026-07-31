@@ -45,6 +45,10 @@ services:
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      # We're on plain HTTP by IP for now (no domain yet, see docs/DEPLOY.md) —
+      # n8n's default secure-cookie requirement blocks login without this.
+      # Revisit once a domain + real HTTPS is in front of the server.
+      N8N_SECURE_COOKIE: "false"
       N8N_HOST: ${N8N_HOST}
       WEBHOOK_URL: ${WEBHOOK_URL}
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
