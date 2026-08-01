@@ -1,7 +1,15 @@
 {$APP_DOMAIN} {
+	log {
+		output stdout
+		format console
+	}
 	reverse_proxy frontend:80
 }
 
 {$N8N_HOST} {
+	log {
+		output stdout
+		format console
+	}
 	reverse_proxy n8n:5678
 }
