@@ -57,6 +57,42 @@ async function findOpenOrder(customerPhone: string) {
   return expired ? null : latest;
 }
 
+interface OpenBulkGroup {
+  stage: "awaiting_review" | "awaiting_confirm";
+  siblings: OrderWithItems[];
+  baseWaMessageId: string;
+}
+
+/**
+ * The owner's most recent bulk dispatch, if it's still waiting on a "SI"/"NO"
+ * review or a final "Confirmar" — same "open conversation" idea as
+ * findOpenOrder, but keyed to the whole group of sibling orders instead of one.
+ */
+async function findOpenBulkGroup(ownerPhone: string): Promise<OpenBulkGroup | null> {
+  const latest = await prisma.order.findFirst({
+    where: {
+      customerPhone: normalizePhone(ownerPhone),
+      status: OrderStatus.PENDING,
+      waMessageId: { contains: "#" },
+    },
+    orderBy: { receivedAt: "desc" },
+  });
+  if (!latest || latest.confirmedAt || !latest.addressRequestedAt) return null;
+
+  const expired = Date.now() - latest.addressRequestedAt.getTime() > ORDER_CONVERSATION_WINDOW_MS;
+  if (expired) return null;
+
+  const baseWaMessageId = latest.waMessageId!.split("#")[0];
+  const siblings = await prisma.order.findMany({
+    where: { waMessageId: { startsWith: `${baseWaMessageId}#` }, status: OrderStatus.PENDING },
+    include: { items: { include: { product: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  if (siblings.length === 0) return null;
+
+  return { stage: latest.reviewedAt ? "awaiting_confirm" : "awaiting_review", siblings, baseWaMessageId };
+}
+
 /** "Confirmar", "confirmar!", "Confirmar por favor" — not "confirmame la dirección" or similar. */
 function isConfirmationMessage(text: string): boolean {
   return /^confirmar\b/.test(stripDiacritics(text.toLowerCase()).trim());
@@ -65,6 +101,16 @@ function isConfirmationMessage(text: string): boolean {
 /** "Cancelar", "cancelar!", "Cancelar por favor". */
 function isCancellationMessage(text: string): boolean {
   return /^cancelar\b/.test(stripDiacritics(text.toLowerCase()).trim());
+}
+
+/** "Si", "si!", "Si, dale" — the owner confirming a bulk dispatch was read correctly. */
+function isAffirmativeMessage(text: string): boolean {
+  return /^si\b/.test(stripDiacritics(text.toLowerCase()).trim());
+}
+
+/** "No", "no!", "No, esta mal" — the owner rejecting a bulk dispatch. */
+function isNegativeMessage(text: string): boolean {
+  return /^no\b/.test(stripDiacritics(text.toLowerCase()).trim());
 }
 
 /**
@@ -130,8 +176,8 @@ function buildCancelReplyText(order: OrderWithItems): string {
   return `❌ Listo, cancelamos tu pedido (${summarizeMatchedItems(order.items)}). Si te arrepentís, escribinos de nuevo. 🙌`;
 }
 
-function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
-  const lines = labeledOrders.map(({ label, order }) => {
+function formatLabeledOrderLines(labeledOrders: { label: string; order: OrderWithItems }[]): string[] {
+  return labeledOrders.map(({ label, order }) => {
     const matched = order.items.filter((item) => item.matched);
     const summary =
       matched.length > 0
@@ -139,8 +185,27 @@ function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItem
         : "sin productos reconocidos";
     return `${label}: ${summary}`;
   });
+}
 
-  return `📦 Cargamos ${lines.length} pedido${lines.length === 1 ? "" : "s"}:\n${lines.join("\n")}`;
+function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
+  const lines = formatLabeledOrderLines(labeledOrders);
+  return `📦 Cargamos ${lines.length} pedido${lines.length === 1 ? "" : "s"}:\n${lines.join("\n")}\n\n¿Es correcto? Respondé SI o NO.`;
+}
+
+/** Reply once the owner answers "SI" — the group moves from review to awaiting the final "Confirmar". */
+function buildBulkReviewedReplyText(): string {
+  return '👍 Genial. Escribí "Confirmar" ✅ para confirmar los pedidos.';
+}
+
+/** Reply once the owner answers "NO" — the whole batch gets cancelled and needs to be resent. */
+function buildBulkResendReplyText(): string {
+  return '❌ Ok, mandá de nuevo todos los pedidos bien escritos, uno por línea (ej: "20 bolsitas Nexus").';
+}
+
+/** Reply once the owner sends "Confirmar" — closes the whole bulk group with a final recap. */
+function buildBulkConfirmedReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
+  const lines = formatLabeledOrderLines(labeledOrders);
+  return `✅ ¡Pedidos confirmados! 🧊\n${lines.join("\n")}\nYa los estamos preparando. 🙌`;
 }
 
 interface WhatsappOrderResult {
@@ -169,6 +234,7 @@ async function createBulkOrdersFromWhatsapp(
         receivedAt,
         customerId,
         deliveryAddress: line.label,
+        addressRequestedAt: new Date(),
         items: {
           create: line.items.map((item) => ({
             productId: item.productId,
@@ -270,6 +336,47 @@ export async function createOrderFromWhatsapp(
   if (OWNER_PHONES.has(normalizePhone(input.customerPhone))) {
     const bulkLines = parseBulkOrderText(input.rawMessage, aliasIndex);
     if (bulkLines) return createBulkOrdersFromWhatsapp(input, bulkLines);
+
+    const bulkGroup = await findOpenBulkGroup(input.customerPhone);
+    if (bulkGroup) {
+      const labeledOrders = bulkGroup.siblings.map((order) => ({ label: order.deliveryAddress ?? "", order }));
+
+      if (bulkGroup.stage === "awaiting_review") {
+        if (isAffirmativeMessage(input.rawMessage)) {
+          await prisma.order.updateMany({
+            where: { waMessageId: { startsWith: `${bulkGroup.baseWaMessageId}#` } },
+            data: { reviewedAt: new Date() },
+          });
+          return { order: bulkGroup.siblings[0], replyText: buildBulkReviewedReplyText(), addressCaptured: false };
+        }
+        if (isNegativeMessage(input.rawMessage)) {
+          await prisma.order.updateMany({
+            where: { waMessageId: { startsWith: `${bulkGroup.baseWaMessageId}#` } },
+            data: { status: OrderStatus.CANCELLED },
+          });
+          return { order: bulkGroup.siblings[0], replyText: buildBulkResendReplyText(), addressCaptured: false };
+        }
+        return {
+          order: bulkGroup.siblings[0],
+          replyText: '🤔 Respondé "SI" si está todo correcto, o "NO" si hay que corregir algo.',
+          addressCaptured: false,
+        };
+      }
+
+      // awaiting_confirm
+      if (isConfirmationMessage(input.rawMessage)) {
+        await prisma.order.updateMany({
+          where: { waMessageId: { startsWith: `${bulkGroup.baseWaMessageId}#` } },
+          data: { confirmedAt: new Date() },
+        });
+        return { order: bulkGroup.siblings[0], replyText: buildBulkConfirmedReplyText(labeledOrders), addressCaptured: false };
+      }
+      return {
+        order: bulkGroup.siblings[0],
+        replyText: '🤔 Escribí "Confirmar" ✅ para confirmar los pedidos.',
+        addressCaptured: false,
+      };
+    }
   }
 
   const openOrder = await findOpenOrder(input.customerPhone);

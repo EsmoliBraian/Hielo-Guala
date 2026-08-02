@@ -64,6 +64,9 @@ model Order {
   /// is read as part of this same order (more items, the address, or "Confirmar")
   /// instead of starting a new one.
   addressRequestedAt DateTime?
+  /// Bulk owner dispatch only: set once the owner replies "SI" to the correctness
+  /// check, moving the group from "awaiting SI/NO" to "awaiting Confirmar".
+  reviewedAt         DateTime?
   /// Set once the customer replies "Confirmar" — closes the conversation so the
   /// next message always starts a fresh order instead of being appended here.
   confirmedAt        DateTime?
