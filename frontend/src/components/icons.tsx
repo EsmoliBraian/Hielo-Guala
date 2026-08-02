@@ -109,6 +109,31 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChevronUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="m6 15 6-6 6 6" />
+    </svg>
+  );
+}
+
+export function IconLayoutList(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="3.5" y="4" width="17" height="5" rx="1.5" />
+      <rect x="3.5" y="14.5" width="17" height="5" rx="1.5" />
+    </svg>
+  );
+}
+
+export function IconListCompact(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+    </svg>
+  );
+}
+
 export function IconTag(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)}>

@@ -42,6 +42,8 @@ export interface Order {
   /** Set once the bot asked for the address; null again once the customer answers. */
   addressRequestedAt: string | null;
   customerId: string | null;
+  /** Only populated on the pending orders board (GET /orders); null when not linked to a customer. */
+  customer?: { name: string } | null;
   items: OrderItem[];
   /** Only present on history rows (from GET /orders/history); items omitted there. */
   sale?: Pick<

@@ -17,6 +17,24 @@ export function Modal({ title, onClose, children }: ModalProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  // Locks the page behind the modal — otherwise scrolling the list underneath
+  // while a modal is open causes visible layout glitches. The scroll container
+  // is `.app-content` on desktop and `body` itself on mobile (see styles.css),
+  // so both need to be locked.
+  useEffect(() => {
+    const appContent = document.querySelector<HTMLElement>(".app-content");
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousAppContentOverflow = appContent?.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    if (appContent) appContent.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      if (appContent) appContent.style.overflow = previousAppContentOverflow ?? "";
+    };
+  }, []);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-panel animate-in" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">

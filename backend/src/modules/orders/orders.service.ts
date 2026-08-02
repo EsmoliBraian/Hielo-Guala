@@ -197,7 +197,11 @@ export async function assignCustomer(orderId: string, customerId: string) {
   return prisma.order.update({
     where: { id: orderId },
     data: { customerId },
-    include: { items: { include: { product: true } }, sale: true },
+    include: {
+      items: { include: { product: true } },
+      sale: true,
+      customer: { select: { name: true } },
+    },
   });
 }
 
@@ -217,7 +221,7 @@ export async function markBotAnswered(orderId: string, success: boolean, error?:
 export function listOrders(status: OrderStatus = OrderStatus.PENDING) {
   return prisma.order.findMany({
     where: { status },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true } }, customer: { select: { name: true } } },
     orderBy: { receivedAt: "asc" }, // FIFO: quien pidió primero aparece primero
   });
 }
