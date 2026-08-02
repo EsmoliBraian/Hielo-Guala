@@ -62,8 +62,42 @@ export function OrdersBoard() {
 
   useEffect(() => {
     loadOrders();
-    const interval = setInterval(loadOrders, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+
+    // Mobile browsers throttle setInterval in a backgrounded tab to save
+    // battery, so polling alone silently goes stale while someone's off
+    // checking WhatsApp — the page looked like it needed a manual reload.
+    // Pausing while hidden and refetching the instant it's visible again
+    // fixes that (and uses less data than polling unattended in the background).
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    function startPolling() {
+      if (interval) return;
+      interval = setInterval(loadOrders, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        loadOrders();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+
+    if (document.visibilityState === "visible") startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadOrders]);
 
   function changeViewMode(mode: ViewMode) {
