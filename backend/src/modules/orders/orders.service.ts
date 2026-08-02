@@ -297,7 +297,7 @@ async function createBulkParseFailureOrder(
     include: { items: { include: { product: true } } },
   });
 
-  const replyText = `🤔 No pudimos separar los pedidos por cliente. Revisá esta línea: "${failedLine}" (necesita cantidad, producto y nombre del cliente, ej: "15 bolsitas Jose"). Te dejamos todo como un solo pedido pendiente — corregilo y volvé a mandar la lista completa.`;
+  const replyText = `🤔 No pudimos separar los pedidos por cliente. Cada línea necesita: cantidad + producto + cliente (ej: "15 bolsitas Jose"). Esta línea no tiene cliente: "${failedLine}". Te dejamos todo como un solo pedido pendiente — corregilo y volvé a mandar la lista completa.`;
 
   return { order, replyText, addressCaptured: false };
 }
