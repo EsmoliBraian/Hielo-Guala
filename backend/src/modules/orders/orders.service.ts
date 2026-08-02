@@ -2,8 +2,22 @@ import { DiscountType, OrderStatus, PaymentMethod, Prisma } from "@prisma/client
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { normalizePhone } from "../../lib/phone.js";
-import { parseOrderText } from "../../parser/orderParser.js";
+import { parseBulkOrderText, parseOrderText, type BulkOrderLine } from "../../parser/orderParser.js";
 import { buildAliasIndex } from "../aliases/aliases.service.js";
+
+/**
+ * Phones allowed to dispatch several orders in one WhatsApp message (see
+ * createBulkOrdersFromWhatsapp below) — normally just the owner's own number.
+ * Regular customers' free text never happens to match that format, but this
+ * keeps it opt-in rather than relying on that alone.
+ */
+const OWNER_PHONES = new Set(
+  (process.env.OWNER_PHONES ?? "")
+    .split(",")
+    .map((phone) => phone.trim())
+    .filter(Boolean)
+    .map(normalizePhone),
+);
 
 interface CreateOrderFromWhatsappInput {
   customerPhone: string;
@@ -62,14 +76,70 @@ function buildOrderReplyText(items: OrderWithItems["items"], askAddress: boolean
   return text;
 }
 
+function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
+  const lines = labeledOrders.map(({ label, order }) => {
+    const matched = order.items.filter((item) => item.matched);
+    const summary =
+      matched.length > 0
+        ? matched.map((item) => `${item.quantity}x ${item.product!.name}`).join(", ")
+        : "sin productos reconocidos";
+    return `${label}: ${summary}`;
+  });
+
+  return `Cargamos ${lines.length} pedido${lines.length === 1 ? "" : "s"}:\n${lines.join("\n")}`;
+}
+
 interface WhatsappOrderResult {
   order: OrderWithItems;
   replyText: string;
   addressCaptured: boolean;
 }
 
+/** One Order per line, all sharing `${waMessageId}#<index>` so a webhook retry never duplicates the batch. */
+async function createBulkOrdersFromWhatsapp(
+  input: CreateOrderFromWhatsappInput,
+  bulkLines: BulkOrderLine[],
+): Promise<WhatsappOrderResult> {
+  const customerPhone = normalizePhone(input.customerPhone);
+  const customerId = await findCustomerIdByPhone(customerPhone);
+  const receivedAt = new Date(input.receivedAt);
+
+  const createdOrders: OrderWithItems[] = [];
+  for (let i = 0; i < bulkLines.length; i++) {
+    const line = bulkLines[i];
+    const order = await prisma.order.create({
+      data: {
+        customerPhone,
+        rawMessage: line.rawFragment,
+        waMessageId: `${input.waMessageId}#${i}`,
+        receivedAt,
+        customerId,
+        deliveryAddress: line.label,
+        items: {
+          create: line.items.map((item) => ({
+            productId: item.productId,
+            rawFragment: item.rawFragment,
+            quantity: item.quantity,
+            matched: item.matched,
+          })),
+        },
+      },
+      include: { items: { include: { product: true } } },
+    });
+    createdOrders.push(order);
+  }
+
+  const replyText = buildBulkReplyText(
+    createdOrders.map((order, i) => ({ label: bulkLines[i].label, order })),
+  );
+
+  return { order: createdOrders[0], replyText, addressCaptured: false };
+}
+
 /**
- * Idempotent on waMessageId: WhatsApp/n8n webhook retries never duplicate an order.
+ * Idempotent on waMessageId: WhatsApp/n8n webhook retries never duplicate an order
+ * (a bulk dispatch stores `${waMessageId}#0`, `#1`, ... instead of the bare id,
+ * so the lookup below checks for either shape).
  *
  * A message is treated as the answer to a pending "¿cuál es la dirección?" question
  * (instead of a new order) when the parser can't match a single product in it and
@@ -79,15 +149,36 @@ interface WhatsappOrderResult {
 export async function createOrderFromWhatsapp(
   input: CreateOrderFromWhatsappInput,
 ): Promise<WhatsappOrderResult> {
-  const existing = await prisma.order.findUnique({
-    where: { waMessageId: input.waMessageId },
+  const existing = await prisma.order.findFirst({
+    where: {
+      OR: [{ waMessageId: input.waMessageId }, { waMessageId: { startsWith: `${input.waMessageId}#` } }],
+    },
     include: { items: { include: { product: true } } },
+    orderBy: { createdAt: "asc" },
   });
   if (existing) {
+    if (existing.waMessageId?.includes("#")) {
+      const baseWaMessageId = existing.waMessageId.split("#")[0];
+      const siblings = await prisma.order.findMany({
+        where: { waMessageId: { startsWith: `${baseWaMessageId}#` } },
+        include: { items: { include: { product: true } } },
+        orderBy: { createdAt: "asc" },
+      });
+      const replyText = buildBulkReplyText(
+        siblings.map((order) => ({ label: order.deliveryAddress ?? "", order })),
+      );
+      return { order: existing, replyText, addressCaptured: false };
+    }
     return { order: existing, replyText: buildOrderReplyText(existing.items, false), addressCaptured: false };
   }
 
   const aliasIndex = await buildAliasIndex();
+
+  if (OWNER_PHONES.has(normalizePhone(input.customerPhone))) {
+    const bulkLines = parseBulkOrderText(input.rawMessage, aliasIndex);
+    if (bulkLines) return createBulkOrdersFromWhatsapp(input, bulkLines);
+  }
+
   const parsedItems = parseOrderText(input.rawMessage, aliasIndex);
   const matchedCount = parsedItems.filter((item) => item.matched).length;
 
@@ -209,13 +300,20 @@ export async function markBotAnswered(orderId: string, success: boolean, error?:
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new HttpError(404, "Pedido no encontrado");
 
-  return prisma.order.update({
-    where: { id: orderId },
-    data: {
-      botAnswered: success,
-      botAnswerError: success ? null : (error ?? "Error desconocido"),
-    },
-  });
+  const data = { botAnswered: success, botAnswerError: success ? null : (error ?? "Error desconocido") };
+
+  // Bulk dispatch (waMessageId "<id>#<index>"): one WhatsApp reply covers every
+  // order created from that message, so the confirmation applies to all of them.
+  const hashIndex = order.waMessageId?.indexOf("#") ?? -1;
+  if (hashIndex > 0) {
+    const baseWaMessageId = order.waMessageId!.slice(0, hashIndex);
+    await prisma.order.updateMany({
+      where: { waMessageId: { startsWith: `${baseWaMessageId}#` } },
+      data,
+    });
+  }
+
+  return prisma.order.update({ where: { id: orderId }, data });
 }
 
 export function listOrders(status: OrderStatus = OrderStatus.PENDING) {

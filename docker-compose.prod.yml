@@ -23,6 +23,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${PORT}
       TZ: ${TZ}
+      OWNER_PHONES: ${OWNER_PHONES}
     depends_on:
       postgres:
         condition: service_healthy

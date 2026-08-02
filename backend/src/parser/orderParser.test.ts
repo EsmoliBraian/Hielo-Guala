@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOrderText, type AliasEntry } from "./orderParser.js";
+import { parseBulkOrderText, parseOrderText, type AliasEntry } from "./orderParser.js";
 
 const aliasIndex: AliasEntry[] = [
   { alias: "bolsita", productId: "p2kg", weightKg: 2 },
@@ -82,5 +82,51 @@ describe("parseOrderText", () => {
       { productId: "p2kg", rawFragment: "2 bolsitas", quantity: 2, matched: true },
       { productId: "p10kg", rawFragment: "1 bolson", quantity: 1, matched: true },
     ]);
+  });
+});
+
+describe("parseBulkOrderText", () => {
+  it("splits one order per line, addressed to whatever follows the dash", () => {
+    const lines = parseBulkOrderText("30 bolsitas - Obrador\n2 bolsones - el puesto", aliasIndex);
+
+    expect(lines).toEqual([
+      {
+        label: "Obrador",
+        rawFragment: "30 bolsitas",
+        items: [{ productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true }],
+      },
+      {
+        label: "el puesto",
+        rawFragment: "2 bolsones",
+        items: [{ productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true }],
+      },
+    ]);
+  });
+
+  it("allows more than one product per destination", () => {
+    const lines = parseBulkOrderText("30 bolsitas y 2 bolsones - Obrador", aliasIndex);
+
+    expect(lines).toEqual([
+      {
+        label: "Obrador",
+        rawFragment: "30 bolsitas y 2 bolsones",
+        items: [
+          { productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true },
+          { productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true },
+        ],
+      },
+    ]);
+  });
+
+  it("bails out (returns null) when a line doesn't have a dash", () => {
+    expect(parseBulkOrderText("30 bolsitas - Obrador\n2 bolsitas y 1 bolson", aliasIndex)).toBeNull();
+  });
+
+  it("bails out when a line's items are entirely unrecognized", () => {
+    expect(parseBulkOrderText("hola - Obrador", aliasIndex)).toBeNull();
+  });
+
+  it("returns null for blank text", () => {
+    expect(parseBulkOrderText("   ", aliasIndex)).toBeNull();
   });
 });

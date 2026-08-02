@@ -113,3 +113,44 @@ export function parseOrderText(text: string, aliasIndex: AliasEntry[]): ParsedIt
     };
   });
 }
+
+export interface BulkOrderLine {
+  /** Whatever follows the dash — a delivery point, not necessarily a full address. */
+  label: string;
+  rawFragment: string;
+  items: ParsedItem[];
+}
+
+/**
+ * "30 bolsitas - Obrador\n2 bolsones - el puesto" → one order per line, each
+ * addressed to whatever follows the dash. Meant only for the owner dispatching
+ * several orders from their own number in one message — a regular customer's
+ * free text never happens to look like this, so there's no ambiguity with the
+ * normal single-order parser above.
+ *
+ * Returns null (caller falls back to a normal single order) if any line
+ * doesn't fit the "<items> - <label>" shape or has zero recognizable items —
+ * an all-or-nothing check so a message either reads entirely as a dispatch
+ * list or entirely as free text, never a confusing mix.
+ */
+export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): BulkOrderLine[] | null {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return null;
+
+  const result: BulkOrderLine[] = [];
+  for (const line of lines) {
+    const match = line.match(/^(.+?)\s+-\s+(.+)$/);
+    if (!match) return null;
+
+    const [, itemsText, label] = match;
+    const items = parseOrderText(itemsText, aliasIndex);
+    if (items.length === 0 || items.every((item) => !item.matched)) return null;
+
+    result.push({ label: label.trim(), rawFragment: itemsText.trim(), items });
+  }
+
+  return result;
+}
