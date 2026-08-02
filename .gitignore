@@ -14,6 +14,9 @@ backend/prisma/dev.db-journal
 # n8n local data
 n8n/data/
 
+# DB backups (produced on the server by scripts/backup-db.sh, never local)
+backups/
+
 # OS / editor
 .DS_Store
 Thumbs.db
