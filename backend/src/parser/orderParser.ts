@@ -16,10 +16,15 @@ export interface ParsedItem {
 }
 
 function normalize(text: string): string {
+  // Collapses horizontal whitespace per line but keeps the newlines themselves —
+  // segment() below splits on them, so a plain \s+ collapse here was silently
+  // erasing line breaks before they ever got a chance to separate anything.
   return stripDiacritics(text.toLowerCase())
     .replace(/[.;!?]/g, " ") // keep ',' — it's a segment separator
-    .replace(/\s+/g, " ")
-    .trim();
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
 }
 
 function segment(text: string): string[] {
@@ -84,6 +89,31 @@ function matchAlias(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
   return null;
 }
 
+/**
+ * Like matchAlias, but only matches at the *start* of `rest` and reports how much
+ * of it the alias consumed — so the caller can treat whatever's left over as a
+ * trailing label (used by the no-dash bulk format below, e.g. "20 bolsitas Nexus").
+ */
+function matchAliasPrefix(rest: string, aliasIndex: AliasEntry[]): { entry: AliasEntry; label: string } | null {
+  if (!rest) return null;
+
+  const sorted = [...aliasIndex].sort((a, b) => b.alias.length - a.alias.length);
+  const words = rest.split(" ");
+  const restSingular = singularizeWords(rest);
+
+  for (const entry of sorted) {
+    const aliasSingular = singularizeWords(entry.alias);
+    if (restSingular === aliasSingular) return { entry, label: "" };
+
+    if (restSingular.startsWith(`${aliasSingular} `)) {
+      const aliasWordCount = aliasSingular.split(" ").length;
+      return { entry, label: words.slice(aliasWordCount).join(" ").trim() };
+    }
+  }
+
+  return null;
+}
+
 /** Matches an explicit weight mention — "3kg" glued or spaced, or "de 3" (kg implied, e.g. "bolsa de 2"). */
 function matchByWeightRegex(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
   const weightMatch = rest.match(/(\d+)\s?kg\b/) ?? rest.match(/\bde\s+(\d+)\b/);
@@ -125,17 +155,23 @@ export interface BulkOrderLine {
   items: ParsedItem[];
 }
 
+function capitalize(text: string): string {
+  return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
 /**
- * "30 bolsitas - Obrador\n2 bolsones - el puesto" → one order per line, each
- * addressed to whatever follows the dash. Meant only for the owner dispatching
- * several orders from their own number in one message — a regular customer's
- * free text never happens to look like this, so there's no ambiguity with the
- * normal single-order parser above.
+ * "30 bolsitas - Obrador\n2 bolsones - el puesto", or the same thing without a
+ * dash ("20 bolsitas Nexus\n15 bolsones Hotel Provincial") → one order per
+ * line, each addressed to whatever follows the product. Meant only for the
+ * owner dispatching several orders from their own number in one message — a
+ * regular customer's free text never happens to look like this, so there's no
+ * ambiguity with the normal single-order parser above.
  *
  * Returns null (caller falls back to a normal single order) if any line
- * doesn't fit the "<items> - <label>" shape or has zero recognizable items —
- * an all-or-nothing check so a message either reads entirely as a dispatch
- * list or entirely as free text, never a confusing mix.
+ * doesn't fit either shape, or has zero recognizable items, or (for the
+ * no-dash shape) has no label after the product — an all-or-nothing check so
+ * a message either reads entirely as a dispatch list or entirely as free
+ * text, never a confusing mix.
  */
 export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): BulkOrderLine[] | null {
   const lines = text
@@ -146,14 +182,30 @@ export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): Bulk
 
   const result: BulkOrderLine[] = [];
   for (const line of lines) {
-    const match = line.match(/^(.+?)\s+-\s+(.+)$/);
-    if (!match) return null;
+    const dashMatch = line.match(/^(.+?)\s+-\s+(.+)$/);
+    if (dashMatch) {
+      const [, itemsText, label] = dashMatch;
+      const items = parseOrderText(itemsText, aliasIndex);
+      if (items.length === 0 || items.every((item) => !item.matched)) return null;
+      result.push({ label: label.trim(), rawFragment: itemsText.trim(), items });
+      continue;
+    }
 
-    const [, itemsText, label] = match;
-    const items = parseOrderText(itemsText, aliasIndex);
-    if (items.length === 0 || items.every((item) => !item.matched)) return null;
+    // No dash: "<qty> <product words> <label>", e.g. "20 bolsitas Nexus" — the
+    // label is whatever's left right after the recognized product phrase.
+    const normalizedLine = normalize(line);
+    const { quantity, rest } = extractQuantity(normalizedLine);
+    const prefixMatch = matchAliasPrefix(rest, aliasIndex);
+    if (!prefixMatch || !prefixMatch.label) return null;
 
-    result.push({ label: label.trim(), rawFragment: itemsText.trim(), items });
+    const productFragment = `${quantity} ${prefixMatch.entry.alias}`;
+    const item: ParsedItem = {
+      productId: prefixMatch.entry.productId,
+      rawFragment: productFragment,
+      quantity,
+      matched: true,
+    };
+    result.push({ label: capitalize(prefixMatch.label), rawFragment: productFragment, items: [item] });
   }
 
   return result;

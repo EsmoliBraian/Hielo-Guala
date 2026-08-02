@@ -1007,6 +1007,17 @@ button {
   flex-shrink: 0;
 }
 
+.compact-row-cancel {
+  padding: 7px;
+  flex-shrink: 0;
+  color: var(--color-error);
+}
+
+.compact-row-cancel:hover:not(:disabled) {
+  background: var(--color-error-soft);
+  color: var(--color-error-soft-text);
+}
+
 .compact-row-details {
   display: flex;
   align-items: center;
@@ -1880,6 +1891,16 @@ button {
 }
 
 .history-cancel-btn:hover:not(:disabled) {
+  background: var(--color-error-soft);
+  color: var(--color-error-soft-text);
+}
+
+.order-cancel-btn {
+  padding: 7px;
+  color: var(--color-error);
+}
+
+.order-cancel-btn:hover:not(:disabled) {
   background: var(--color-error-soft);
   color: var(--color-error-soft-text);
 }

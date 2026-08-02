@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMemo, useState } from "react";
 import type { Order } from "../types/api";
+import { CancelOrderButton } from "./CancelOrderButton";
 import type { DeliverPayload } from "./DeliverModal";
 import { DeliverModal } from "./DeliverModal";
 import { IconAlertTriangle, IconChevronDown, IconGripVertical } from "./icons";
@@ -10,6 +11,7 @@ interface CompactOrderRowProps {
   order: Order;
   position: number;
   onDeliver: (orderId: string, payload: DeliverPayload) => Promise<void>;
+  onCancelled: (orderId: string) => void;
 }
 
 interface BagBreakdownEntry {
@@ -34,7 +36,7 @@ function bagBreakdown(order: Order): BagBreakdownEntry[] {
 }
 
 /** One order per line — client, order number, deliver action. Tap the row for the bag/address detail. Drag by the handle to reorder. */
-export function CompactOrderRow({ order, position, onDeliver }: CompactOrderRowProps) {
+export function CompactOrderRow({ order, position, onDeliver, onCancelled }: CompactOrderRowProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: order.id });
@@ -72,6 +74,8 @@ export function CompactOrderRow({ order, position, onDeliver }: CompactOrderRowP
           )}
           <IconChevronDown width={13} height={13} className={`chevron${expanded ? " chevron-open" : ""}`} />
         </button>
+
+        <CancelOrderButton order={order} onCancelled={onCancelled} className="btn btn-ghost btn-sm compact-row-cancel" />
 
         <button
           type="button"

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Order } from "../types/api";
+import { CancelOrderButton } from "./CancelOrderButton";
 import { CustomerLinkButton } from "./CustomerLinkButton";
 import type { DeliverPayload } from "./DeliverModal";
 import { DeliverModal } from "./DeliverModal";
@@ -19,9 +20,10 @@ interface OrderCardProps {
   position: number;
   onDeliver: (orderId: string, payload: DeliverPayload) => Promise<void>;
   onCustomerLinked: (order: Order) => void;
+  onCancelled: (orderId: string) => void;
 }
 
-export function OrderCard({ order, position, onDeliver, onCustomerLinked }: OrderCardProps) {
+export function OrderCard({ order, position, onDeliver, onCustomerLinked, onCancelled }: OrderCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   const hasUnmatchedItems = order.items.some((item) => !item.matched);
@@ -69,6 +71,7 @@ export function OrderCard({ order, position, onDeliver, onCustomerLinked }: Orde
 
       <div className="order-card-footer">
         <CustomerLinkButton order={order} onLinked={onCustomerLinked} />
+        <CancelOrderButton order={order} onCancelled={onCancelled} className="btn btn-ghost btn-sm order-cancel-btn" />
         <label className="order-deliver">
           <input type="checkbox" className="switch-input" checked={false} onChange={() => setModalOpen(true)} />
           <span className="switch-track">

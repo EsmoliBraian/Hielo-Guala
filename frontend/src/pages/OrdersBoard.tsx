@@ -137,6 +137,11 @@ export function OrdersBoard() {
     setOrders((prev) => prev.map((order) => (order.id === updated.id ? updated : order)));
   }
 
+  function handleOrderCancelled(orderId: string) {
+    setOrders((prev) => prev.filter((order) => order.id !== orderId));
+    setOrderIds((prev) => prev.filter((id) => id !== orderId));
+  }
+
   async function handleOrderCreated() {
     setShowNewOrderForm(false);
     await loadOrders();
@@ -222,6 +227,7 @@ export function OrdersBoard() {
               position={index + 1}
               onDeliver={handleDeliver}
               onCustomerLinked={handleCustomerLinked}
+              onCancelled={handleOrderCancelled}
             />
           ))}
         </div>
@@ -232,7 +238,13 @@ export function OrdersBoard() {
           <SortableContext items={orderIds} strategy={verticalListSortingStrategy}>
             <div className="compact-list">
               {displayOrders.map((order, index) => (
-                <CompactOrderRow key={order.id} order={order} position={index + 1} onDeliver={handleDeliver} />
+                <CompactOrderRow
+                  key={order.id}
+                  order={order}
+                  position={index + 1}
+                  onDeliver={handleDeliver}
+                  onCancelled={handleOrderCancelled}
+                />
               ))}
             </div>
           </SortableContext>

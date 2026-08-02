@@ -9,6 +9,7 @@ const aliasIndex: AliasEntry[] = [
   { alias: "melin", productId: "p3kg", weightKg: 3 },
   { alias: "bolsa", productId: "p3kg", weightKg: 3 },
   { alias: "bolson", productId: "p10kg", weightKg: 10 },
+  { alias: "bolsones", productId: "p10kg", weightKg: 10 },
   { alias: "hielo grande", productId: "p10kg", weightKg: 10 },
 ];
 
@@ -92,6 +93,15 @@ describe("parseOrderText", () => {
       { productId: "p10kg", rawFragment: "1 bolson", quantity: 1, matched: true },
     ]);
   });
+
+  it("treats each line as its own segment instead of merging them into one", () => {
+    const items = parseOrderText("2 bolsitas\n1 bolson", aliasIndex);
+
+    expect(items).toEqual([
+      { productId: "p2kg", rawFragment: "2 bolsitas", quantity: 2, matched: true },
+      { productId: "p10kg", rawFragment: "1 bolson", quantity: 1, matched: true },
+    ]);
+  });
 });
 
 describe("parseBulkOrderText", () => {
@@ -127,8 +137,29 @@ describe("parseBulkOrderText", () => {
     ]);
   });
 
-  it("bails out (returns null) when a line doesn't have a dash", () => {
-    expect(parseBulkOrderText("30 bolsitas - Obrador\n2 bolsitas y 1 bolson", aliasIndex)).toBeNull();
+  it("also splits one order per line without a dash, label right after the product", () => {
+    const lines = parseBulkOrderText("20 bolsitas Nexus\n15 bolsones Hotel Provincial", aliasIndex);
+
+    expect(lines).toEqual([
+      {
+        label: "Nexus",
+        rawFragment: "20 bolsitas",
+        items: [{ productId: "p2kg", rawFragment: "20 bolsitas", quantity: 20, matched: true }],
+      },
+      {
+        label: "Hotel provincial",
+        rawFragment: "15 bolsones",
+        items: [{ productId: "p10kg", rawFragment: "15 bolsones", quantity: 15, matched: true }],
+      },
+    ]);
+  });
+
+  it("bails out (returns null) when a line matches neither shape", () => {
+    expect(parseBulkOrderText("30 bolsitas - Obrador\nhola", aliasIndex)).toBeNull();
+  });
+
+  it("bails out when a no-dash line has no label after the product", () => {
+    expect(parseBulkOrderText("20 bolsitas Nexus\n15 bolsones", aliasIndex)).toBeNull();
   });
 
   it("bails out when a line's items are entirely unrecognized", () => {
