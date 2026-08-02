@@ -55,9 +55,6 @@ services:
       WHATSAPP_CLOUD_API_TOKEN: ${WHATSAPP_CLOUD_API_TOKEN}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
-      EVOLUTION_API_URL: http://evolution-api:8080
-      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
-      EVOLUTION_INSTANCE_NAME: ${EVOLUTION_INSTANCE_NAME}
     depends_on:
       - backend
     volumes:
@@ -83,53 +80,8 @@ services:
       - frontend
       - n8n
 
-  evolution-postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${EVOLUTION_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${EVOLUTION_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${EVOLUTION_POSTGRES_DB}
-    volumes:
-      - evolution_pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${EVOLUTION_POSTGRES_USER} -d ${EVOLUTION_POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  evolution-redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - evolution_redis_data:/data
-
-  evolution-api:
-    image: evoapicloud/evolution-api:latest
-    restart: unless-stopped
-    environment:
-      SERVER_URL: http://${SERVER_PUBLIC_IP}:8080
-      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
-      DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://${EVOLUTION_POSTGRES_USER}:${EVOLUTION_POSTGRES_PASSWORD}@evolution-postgres:5432/${EVOLUTION_POSTGRES_DB}?schema=evolution_api
-      CACHE_REDIS_ENABLED: "true"
-      CACHE_REDIS_URI: redis://evolution-redis:6379/1
-      WEBHOOK_GLOBAL_ENABLED: "true"
-      WEBHOOK_GLOBAL_URL: http://n8n:5678/webhook/hielo-guala-evolution
-      TZ: ${TZ}
-    ports:
-      - "8080:8080"
-    depends_on:
-      evolution-postgres:
-        condition: service_healthy
-    volumes:
-      - evolution_instances:/evolution/instances
-
 volumes:
   pg_data:
   n8n_data:
-  evolution_pg_data:
-  evolution_redis_data:
-  evolution_instances:
   caddy_data:
   caddy_config:

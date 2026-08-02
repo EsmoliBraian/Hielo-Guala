@@ -14,11 +14,9 @@
 |---|---|
 | App (tablero de pedidos) | https://`${APP_DOMAIN}`/ (ej. `https://65-21-250-228.sslip.io/`) |
 | n8n | https://`${N8N_HOST}`/ (ej. `https://n8n.65-21-250-228.sslip.io/`) |
-| Evolution API (admin) | apagado — ver nota abajo |
-
 Backend (puerto 3000) y las bases de datos **no** están expuestas a internet — solo accesibles dentro de la red interna de Docker. Frontend y n8n tampoco exponen sus puertos directamente: todo el tráfico entra por Caddy (80/443), que hace de único punto de entrada HTTPS. El firewall (`ufw`) solo deja pasar SSH, 80 y 443.
 
-**Evolution API está detenido** (`docker compose stop evolution-api evolution-postgres evolution-redis`, 2026-08-02) — la vía oficial (Meta Cloud API) ya está funcionando en producción, así que esto quedó sin uso. Los contenedores y sus datos siguen ahí por si hiciera falta volver atrás, simplemente no arrancan solos (`restart: unless-stopped` respeta el stop manual). Para reactivarlos: `docker compose -f docker-compose.prod.yml up -d evolution-api evolution-postgres evolution-redis` y reabrir el puerto 8080 (`ufw allow 8080/tcp`).
+**Evolution API ya no está en `docker-compose.prod.yml`** (2026-08-02) — la vía oficial (Meta Cloud API) ya está funcionando en producción, así que esto quedó sin uso. (Antes se probó solo con `docker compose stop`, pero un `up -d` de rutina la volvía a levantar sin querer — por eso se sacó directamente del archivo). Los volúmenes viejos (`evolution_pg_data`, `evolution_redis_data`, `evolution_instances`) siguen en el servidor con los datos intactos aunque ya no estén declarados acá; para reactivarla habría que volver a agregar esos servicios al compose (ver el historial de git) y reabrir el puerto 8080 (`ufw allow 8080/tcp`).
 
 ## Diferencias con el entorno de desarrollo
 
