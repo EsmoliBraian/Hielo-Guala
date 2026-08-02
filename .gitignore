@@ -4,6 +4,7 @@ build/
 *.tsbuildinfo
 .env
 .env.local
+.env.bak.*
 *.log
 npm-debug.log*
 
