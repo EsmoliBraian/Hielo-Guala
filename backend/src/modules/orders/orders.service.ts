@@ -47,7 +47,7 @@ async function findCustomerIdByPhone(phone: string): Promise<string | null> {
  */
 async function findOpenOrder(customerPhone: string) {
   const latest = await prisma.order.findFirst({
-    where: { customerPhone },
+    where: { customerPhone, status: OrderStatus.PENDING },
     orderBy: { receivedAt: "desc" },
     include: { items: { include: { product: true } } },
   });
@@ -62,6 +62,11 @@ function isConfirmationMessage(text: string): boolean {
   return /^confirmar\b/.test(stripDiacritics(text.toLowerCase()).trim());
 }
 
+/** "Cancelar", "cancelar!", "Cancelar por favor". */
+function isCancellationMessage(text: string): boolean {
+  return /^cancelar\b/.test(stripDiacritics(text.toLowerCase()).trim());
+}
+
 /**
  * Builds the WhatsApp reply text server-side (instead of in n8n) so both the
  * Cloud API and Evolution workflows stay a thin transport layer.
@@ -71,18 +76,18 @@ function buildOrderReplyText(items: OrderWithItems["items"], askAddress: boolean
   const unmatchedCount = items.length - matched.length;
 
   if (matched.length === 0) {
-    return 'Recibimos tu mensaje pero no pudimos identificar los productos. ¿Nos lo podés escribir de otra forma? (ej: "2 bolsitas y 1 bolson")';
+    return '🤔 Recibimos tu mensaje pero no pudimos identificar los productos. ¿Nos lo podés escribir de otra forma? (ej: "2 bolsitas y 1 bolson")';
   }
 
-  let text = `Pedido recibido: ${matched
+  let text = `🧊 Pedido recibido: ${matched
     .map((item) => `${item.quantity}x ${item.product!.name}`)
-    .join(", ")}. ¡Gracias!`;
+    .join(", ")}. ¡Gracias! 🙌`;
 
   if (unmatchedCount > 0) {
-    text += " Una parte del pedido no la entendimos, en breve te lo confirmamos.";
+    text += " ⚠️ Una parte del pedido no la entendimos, en breve te lo confirmamos.";
   }
   if (askAddress) {
-    text += ' ¿Nos confirmás la dirección de entrega? (local, calle y altura, depto, etc.) Y escribí "Confirmar" cuando el pedido esté completo.';
+    text += ' 📍 ¿Nos confirmás la dirección de entrega? (local, calle y altura, depto, etc.) Y escribí "Confirmar" ✅ cuando el pedido esté completo.';
   }
 
   return text;
@@ -101,23 +106,28 @@ function buildAppendReplyText(order: OrderWithItems, newItems: OrderWithItems["i
 
   let text =
     newMatched.length > 0
-      ? `Sumamos: ${newMatched.map((item) => `${item.quantity}x ${item.product!.name}`).join(", ")}. `
-      : "No identificamos productos en ese mensaje. ";
+      ? `🧊 Sumamos: ${newMatched.map((item) => `${item.quantity}x ${item.product!.name}`).join(", ")}. `
+      : "🤔 No identificamos productos en ese mensaje. ";
 
   text += `Tu pedido hasta ahora: ${summarizeMatchedItems(order.items)}.`;
 
   if (!order.deliveryAddress) {
-    text += " ¿Nos confirmás la dirección de entrega?";
+    text += " 📍 ¿Nos confirmás la dirección de entrega?";
   }
-  text += ' Escribí "Confirmar" cuando el pedido esté completo.';
+  text += ' Escribí "Confirmar" ✅ cuando el pedido esté completo.';
 
   return text;
 }
 
 /** Reply once the customer sends "Confirmar" — closes the conversation with a final recap. */
 function buildConfirmReplyText(order: OrderWithItems): string {
-  const addressLine = order.deliveryAddress ? ` Dirección: ${order.deliveryAddress}.` : "";
-  return `¡Pedido confirmado! ${summarizeMatchedItems(order.items)}.${addressLine} Ya lo estamos preparando. ¡Gracias!`;
+  const addressLine = order.deliveryAddress ? ` 📍 Dirección: ${order.deliveryAddress}.` : "";
+  return `✅ ¡Pedido confirmado! 🧊 ${summarizeMatchedItems(order.items)}.${addressLine} Ya lo estamos preparando. ¡Gracias! 🙌`;
+}
+
+/** Reply once the customer sends "Cancelar" and there was an order to cancel. */
+function buildCancelReplyText(order: OrderWithItems): string {
+  return `❌ Listo, cancelamos tu pedido (${summarizeMatchedItems(order.items)}). Si te arrepentís, escribinos de nuevo. 🙌`;
 }
 
 function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
@@ -130,7 +140,7 @@ function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItem
     return `${label}: ${summary}`;
   });
 
-  return `Cargamos ${lines.length} pedido${lines.length === 1 ? "" : "s"}:\n${lines.join("\n")}`;
+  return `📦 Cargamos ${lines.length} pedido${lines.length === 1 ? "" : "s"}:\n${lines.join("\n")}`;
 }
 
 interface WhatsappOrderResult {
@@ -243,6 +253,18 @@ export async function createOrderFromWhatsapp(
     return { order: existing, replyText: buildOrderReplyText(existing.items, false), addressCaptured: false };
   }
 
+  if (isCancellationMessage(input.rawMessage)) {
+    const cancellable = await prisma.order.findFirst({
+      where: { customerPhone: normalizePhone(input.customerPhone), status: OrderStatus.PENDING },
+      orderBy: { receivedAt: "desc" },
+    });
+    if (cancellable) {
+      const cancelled = await cancelOrder(cancellable.id);
+      return { order: cancelled, replyText: buildCancelReplyText(cancelled), addressCaptured: false };
+    }
+    // Nothing pending to cancel — fall through and let it parse as a normal message below.
+  }
+
   const aliasIndex = await buildAliasIndex();
 
   if (OWNER_PHONES.has(normalizePhone(input.customerPhone))) {
@@ -277,7 +299,7 @@ export async function createOrderFromWhatsapp(
       });
       return {
         order,
-        replyText: `¡Gracias! Guardamos la dirección de entrega: "${deliveryAddress}". Escribí "Confirmar" cuando el pedido esté completo.`,
+        replyText: `📍 ¡Gracias! Guardamos la dirección de entrega: "${deliveryAddress}". Escribí "Confirmar" ✅ cuando el pedido esté completo.`,
         addressCaptured: true,
       };
     }
@@ -288,7 +310,7 @@ export async function createOrderFromWhatsapp(
     return {
       order: openOrder,
       replyText:
-        'No identificamos productos en ese mensaje. Si tu pedido ya está completo, escribí "Confirmar". Si querés agregar algo más, contanos qué (ej: "2 bolsitas").',
+        '🤔 No identificamos productos en ese mensaje. Si tu pedido ya está completo, escribí "Confirmar" ✅. Si querés agregar algo más, contanos qué (ej: "2 bolsitas").',
       addressCaptured: false,
     };
   }
