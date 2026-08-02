@@ -109,6 +109,17 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconTrash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 7h16" />
+      <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+      <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
 export function IconGripVertical(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...iconBase(props)} strokeWidth={2.5}>

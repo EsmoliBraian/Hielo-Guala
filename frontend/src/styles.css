@@ -302,6 +302,7 @@ button {
   min-width: 0;
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   /* Reserves the scrollbar's width whether or not it's actually showing, so
      content doesn't shift sideways the moment a list grows past one screen. */
   scrollbar-gutter: stable;
@@ -1841,8 +1842,10 @@ button {
 .history-row-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .history-row-total {
@@ -1853,7 +1856,9 @@ button {
 }
 
 .history-cancel-btn {
+  padding: 7px;
   color: var(--color-error);
+  flex-shrink: 0;
 }
 
 .history-cancel-btn:hover:not(:disabled) {
@@ -1869,7 +1874,11 @@ button {
   html,
   body {
     height: auto;
-    overflow: visible;
+    overflow-y: visible;
+    /* Belt-and-suspenders: the page itself should never scroll sideways —
+       any element that overflows should get clipped here, not drag the
+       whole viewport with it. */
+    overflow-x: hidden;
   }
 
   .app-shell {
@@ -1941,6 +1950,21 @@ button {
 
   .compact-row-client {
     max-width: 90px;
+  }
+
+  .history-row {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .history-row-main {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .history-row-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .view-toggle-btn span,

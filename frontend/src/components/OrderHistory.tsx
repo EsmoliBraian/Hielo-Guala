@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Order } from "../types/api";
 import { CustomerLinkButton } from "./CustomerLinkButton";
-import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconX } from "./icons";
+import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconTrash, IconX } from "./icons";
 import { Modal } from "./Modal";
 
 const DAY_OPTIONS = [
@@ -272,13 +272,14 @@ export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm history-cancel-btn"
+                          aria-label="Cancelar pedido"
+                          title="Cancelar pedido"
                           onClick={() => {
                             setCancelError(null);
                             setCancelTarget(order);
                           }}
                         >
-                          <IconX width={14} height={14} />
-                          Cancelar
+                          <IconTrash width={15} height={15} />
                         </button>
                       )}
                     </div>
