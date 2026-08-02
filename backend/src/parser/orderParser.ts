@@ -84,8 +84,9 @@ function matchAlias(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
   return null;
 }
 
+/** Matches an explicit weight mention — "3kg" glued or spaced, or "de 3" (kg implied, e.g. "bolsa de 2"). */
 function matchByWeightRegex(rest: string, aliasIndex: AliasEntry[]): AliasEntry | null {
-  const weightMatch = rest.match(/(\d+)\s?kg/);
+  const weightMatch = rest.match(/(\d+)\s?kg\b/) ?? rest.match(/\bde\s+(\d+)\b/);
   if (!weightMatch) return null;
 
   const weightKg = parseInt(weightMatch[1], 10);
@@ -103,7 +104,10 @@ export function parseOrderText(text: string, aliasIndex: AliasEntry[]): ParsedIt
 
   return segment(normalized).map((seg) => {
     const { quantity, rest } = extractQuantity(seg);
-    const match = matchAlias(rest, aliasIndex) ?? matchByWeightRegex(rest, aliasIndex);
+    // An explicit weight ("de 2", "3kg") always wins over a generic word alias
+    // like the bare "bolsa" — otherwise "bolsa de 2" got swallowed as the
+    // generic 3kg fallback before ever considering the "2" right next to it.
+    const match = matchByWeightRegex(rest, aliasIndex) ?? matchAlias(rest, aliasIndex);
 
     return {
       productId: match ? match.productId : null,

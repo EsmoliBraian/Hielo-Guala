@@ -2,7 +2,8 @@ import { DiscountType, OrderStatus, PaymentMethod, Prisma } from "@prisma/client
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { normalizePhone } from "../../lib/phone.js";
-import { parseBulkOrderText, parseOrderText, type BulkOrderLine } from "../../parser/orderParser.js";
+import { parseBulkOrderText, parseOrderText, type BulkOrderLine, type ParsedItem } from "../../parser/orderParser.js";
+import { stripDiacritics } from "../../parser/textNormalize.js";
 import { buildAliasIndex } from "../aliases/aliases.service.js";
 
 /**
@@ -30,24 +31,35 @@ type OrderWithItems = Prisma.OrderGetPayload<{
   include: { items: { include: { product: true } } };
 }>;
 
-/** How long after asking for an address we still treat the customer's next message as the answer. */
-const ADDRESS_REQUEST_WINDOW_MS = 60 * 60 * 1000;
+/** How long a conversation stays "open" (more items / the address / "Confirmar" still expected) after the last relevant message. */
+const ORDER_CONVERSATION_WINDOW_MS = 60 * 60 * 1000;
 
 async function findCustomerIdByPhone(phone: string): Promise<string | null> {
   const match = await prisma.customerPhone.findUnique({ where: { phone: normalizePhone(phone) } });
   return match?.customerId ?? null;
 }
 
-/** The most recent order for this phone if it's still waiting on an address reply. */
-async function findPendingAddressOrder(customerPhone: string) {
+/**
+ * The most recent order for this phone if its conversation is still "open" —
+ * i.e. the customer hasn't sent "Confirmar" yet and the window hasn't expired.
+ * While open, the next message is read as part of THIS order (more items, the
+ * address, or the confirmation) instead of starting a new one.
+ */
+async function findOpenOrder(customerPhone: string) {
   const latest = await prisma.order.findFirst({
     where: { customerPhone },
     orderBy: { receivedAt: "desc" },
+    include: { items: { include: { product: true } } },
   });
-  if (!latest || latest.deliveryAddress !== null || !latest.addressRequestedAt) return null;
+  if (!latest || latest.confirmedAt || !latest.addressRequestedAt) return null;
 
-  const expired = Date.now() - latest.addressRequestedAt.getTime() > ADDRESS_REQUEST_WINDOW_MS;
+  const expired = Date.now() - latest.addressRequestedAt.getTime() > ORDER_CONVERSATION_WINDOW_MS;
   return expired ? null : latest;
+}
+
+/** "Confirmar", "confirmar!", "Confirmar por favor" — not "confirmame la dirección" or similar. */
+function isConfirmationMessage(text: string): boolean {
+  return /^confirmar\b/.test(stripDiacritics(text.toLowerCase()).trim());
 }
 
 /**
@@ -70,10 +82,42 @@ function buildOrderReplyText(items: OrderWithItems["items"], askAddress: boolean
     text += " Una parte del pedido no la entendimos, en breve te lo confirmamos.";
   }
   if (askAddress) {
-    text += " ¿Nos confirmás la dirección de entrega? (local, calle y altura, depto, etc.)";
+    text += ' ¿Nos confirmás la dirección de entrega? (local, calle y altura, depto, etc.) Y escribí "Confirmar" cuando el pedido esté completo.';
   }
 
   return text;
+}
+
+function summarizeMatchedItems(items: OrderWithItems["items"]): string {
+  const matched = items.filter((item) => item.matched);
+  return matched.length > 0
+    ? matched.map((item) => `${item.quantity}x ${item.product!.name}`).join(", ")
+    : "sin productos reconocidos";
+}
+
+/** Reply after a message got appended to an already-open order (more items, and/or still missing the address). */
+function buildAppendReplyText(order: OrderWithItems, newItems: OrderWithItems["items"]): string {
+  const newMatched = newItems.filter((item) => item.matched);
+
+  let text =
+    newMatched.length > 0
+      ? `Sumamos: ${newMatched.map((item) => `${item.quantity}x ${item.product!.name}`).join(", ")}. `
+      : "No identificamos productos en ese mensaje. ";
+
+  text += `Tu pedido hasta ahora: ${summarizeMatchedItems(order.items)}.`;
+
+  if (!order.deliveryAddress) {
+    text += " ¿Nos confirmás la dirección de entrega?";
+  }
+  text += ' Escribí "Confirmar" cuando el pedido esté completo.';
+
+  return text;
+}
+
+/** Reply once the customer sends "Confirmar" — closes the conversation with a final recap. */
+function buildConfirmReplyText(order: OrderWithItems): string {
+  const addressLine = order.deliveryAddress ? ` Dirección: ${order.deliveryAddress}.` : "";
+  return `¡Pedido confirmado! ${summarizeMatchedItems(order.items)}.${addressLine} Ya lo estamos preparando. ¡Gracias!`;
 }
 
 function buildBulkReplyText(labeledOrders: { label: string; order: OrderWithItems }[]): string {
@@ -136,15 +180,42 @@ async function createBulkOrdersFromWhatsapp(
   return { order: createdOrders[0], replyText, addressCaptured: false };
 }
 
+/** Adds more items to an already-open order (customer sent a follow-up message instead of a fresh order). */
+async function appendItemsToOrder(order: OrderWithItems, newItems: ParsedItem[], newRawMessage: string) {
+  const createdItems = await Promise.all(
+    newItems.map((item) =>
+      prisma.orderItem.create({
+        data: {
+          orderId: order.id,
+          productId: item.productId,
+          rawFragment: item.rawFragment,
+          quantity: item.quantity,
+          matched: item.matched,
+        },
+        include: { product: true },
+      }),
+    ),
+  );
+
+  const updatedOrder = await prisma.order.update({
+    where: { id: order.id },
+    data: { rawMessage: `${order.rawMessage}\n${newRawMessage}` },
+    include: { items: { include: { product: true } } },
+  });
+
+  return { order: updatedOrder, newItems: createdItems };
+}
+
 /**
  * Idempotent on waMessageId: WhatsApp/n8n webhook retries never duplicate an order
  * (a bulk dispatch stores `${waMessageId}#0`, `#1`, ... instead of the bare id,
  * so the lookup below checks for either shape).
  *
- * A message is treated as the answer to a pending "¿cuál es la dirección?" question
- * (instead of a new order) when the parser can't match a single product in it and
- * the customer's last order is still waiting on an address — no NLP, just the same
- * rule-based parser the rest of the app already uses.
+ * While a customer's order is "open" (see findOpenOrder), their next message is
+ * read in context instead of starting a new order: "Confirmar" closes it, text
+ * with recognizable products gets appended to it, and anything else is taken as
+ * the delivery address if that's still missing. No NLP — same rule-based parser
+ * the rest of the app already uses, just applied across turns of the conversation.
  */
 export async function createOrderFromWhatsapp(
   input: CreateOrderFromWhatsappInput,
@@ -179,26 +250,51 @@ export async function createOrderFromWhatsapp(
     if (bulkLines) return createBulkOrdersFromWhatsapp(input, bulkLines);
   }
 
-  const parsedItems = parseOrderText(input.rawMessage, aliasIndex);
-  const matchedCount = parsedItems.filter((item) => item.matched).length;
+  const openOrder = await findOpenOrder(input.customerPhone);
 
-  const pendingAddressOrder =
-    matchedCount === 0 ? await findPendingAddressOrder(input.customerPhone) : null;
+  if (openOrder) {
+    if (isConfirmationMessage(input.rawMessage)) {
+      const confirmed = await prisma.order.update({
+        where: { id: openOrder.id },
+        data: { confirmedAt: new Date() },
+        include: { items: { include: { product: true } } },
+      });
+      return { order: confirmed, replyText: buildConfirmReplyText(confirmed), addressCaptured: false };
+    }
 
-  if (pendingAddressOrder) {
-    const deliveryAddress = input.rawMessage.trim();
-    const order = await prisma.order.update({
-      where: { id: pendingAddressOrder.id },
-      data: { deliveryAddress },
-      include: { items: { include: { product: true } } },
-    });
+    const followUpItems = parseOrderText(input.rawMessage, aliasIndex);
+    if (followUpItems.some((item) => item.matched)) {
+      const { order: updated, newItems } = await appendItemsToOrder(openOrder, followUpItems, input.rawMessage);
+      return { order: updated, replyText: buildAppendReplyText(updated, newItems), addressCaptured: false };
+    }
+
+    if (!openOrder.deliveryAddress) {
+      const deliveryAddress = input.rawMessage.trim();
+      const order = await prisma.order.update({
+        where: { id: openOrder.id },
+        data: { deliveryAddress },
+        include: { items: { include: { product: true } } },
+      });
+      return {
+        order,
+        replyText: `¡Gracias! Guardamos la dirección de entrega: "${deliveryAddress}". Escribí "Confirmar" cuando el pedido esté completo.`,
+        addressCaptured: true,
+      };
+    }
+
+    // Address already set, message didn't add products, and it wasn't "Confirmar" —
+    // ambiguous, so ask instead of guessing (this is exactly the bug that used to
+    // silently overwrite the address with whatever the customer typed next).
     return {
-      order,
-      replyText: `¡Gracias! Guardamos la dirección de entrega: "${deliveryAddress}".`,
-      addressCaptured: true,
+      order: openOrder,
+      replyText:
+        'No identificamos productos en ese mensaje. Si tu pedido ya está completo, escribí "Confirmar". Si querés agregar algo más, contanos qué (ej: "2 bolsitas").',
+      addressCaptured: false,
     };
   }
 
+  const parsedItems = parseOrderText(input.rawMessage, aliasIndex);
+  const matchedCount = parsedItems.filter((item) => item.matched).length;
   const customerId = await findCustomerIdByPhone(input.customerPhone);
   const askAddress = matchedCount > 0;
 

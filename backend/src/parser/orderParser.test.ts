@@ -63,6 +63,15 @@ describe("parseOrderText", () => {
     ]);
   });
 
+  it('prefers an explicit "de N" weight over the generic bare "bolsa" alias', () => {
+    const items = parseOrderText("1 bolsa de 2 y 4 de 10", aliasIndex);
+
+    expect(items).toEqual([
+      { productId: "p2kg", rawFragment: "1 bolsa de 2", quantity: 1, matched: true },
+      { productId: "p10kg", rawFragment: "4 de 10", quantity: 4, matched: true },
+    ]);
+  });
+
   it("keeps unrecognized text as an unmatched item instead of dropping the order", () => {
     const items = parseOrderText("hola", aliasIndex);
 

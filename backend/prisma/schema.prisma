@@ -59,9 +59,14 @@ model Order {
   waMessageId        String?     @unique
   deliveredAt        DateTime?
   deliveryAddress    String?
-  /// Set when the bot asks for the delivery address; the next WhatsApp
-  /// message from the same phone is treated as the answer instead of a new order.
+  /// Set when the bot asks for the delivery address; while this is recent and
+  /// confirmedAt is still null, the next WhatsApp message from the same phone
+  /// is read as part of this same order (more items, the address, or "Confirmar")
+  /// instead of starting a new one.
   addressRequestedAt DateTime?
+  /// Set once the customer replies "Confirmar" — closes the conversation so the
+  /// next message always starts a fresh order instead of being appended here.
+  confirmedAt        DateTime?
   customerId         String?
   customer           Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdAt          DateTime    @default(now())
