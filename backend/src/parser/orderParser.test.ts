@@ -106,63 +106,85 @@ describe("parseOrderText", () => {
 
 describe("parseBulkOrderText", () => {
   it("splits one order per line, addressed to whatever follows the dash", () => {
-    const lines = parseBulkOrderText("30 bolsitas - Obrador\n2 bolsones - el puesto", aliasIndex);
+    const result = parseBulkOrderText("30 bolsitas - Obrador\n2 bolsones - el puesto", aliasIndex);
 
-    expect(lines).toEqual([
-      {
-        label: "Obrador",
-        rawFragment: "30 bolsitas",
-        items: [{ productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true }],
-      },
-      {
-        label: "el puesto",
-        rawFragment: "2 bolsones",
-        items: [{ productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true }],
-      },
-    ]);
+    expect(result).toEqual({
+      ok: true,
+      lines: [
+        {
+          label: "Obrador",
+          rawFragment: "30 bolsitas",
+          items: [{ productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true }],
+        },
+        {
+          label: "el puesto",
+          rawFragment: "2 bolsones",
+          items: [{ productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true }],
+        },
+      ],
+    });
   });
 
   it("allows more than one product per destination", () => {
-    const lines = parseBulkOrderText("30 bolsitas y 2 bolsones - Obrador", aliasIndex);
+    const result = parseBulkOrderText("30 bolsitas y 2 bolsones - Obrador", aliasIndex);
 
-    expect(lines).toEqual([
-      {
-        label: "Obrador",
-        rawFragment: "30 bolsitas y 2 bolsones",
-        items: [
-          { productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true },
-          { productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true },
-        ],
-      },
-    ]);
+    expect(result).toEqual({
+      ok: true,
+      lines: [
+        {
+          label: "Obrador",
+          rawFragment: "30 bolsitas y 2 bolsones",
+          items: [
+            { productId: "p2kg", rawFragment: "30 bolsitas", quantity: 30, matched: true },
+            { productId: "p10kg", rawFragment: "2 bolsones", quantity: 2, matched: true },
+          ],
+        },
+      ],
+    });
   });
 
   it("also splits one order per line without a dash, label right after the product", () => {
-    const lines = parseBulkOrderText("20 bolsitas Nexus\n15 bolsones Hotel Provincial", aliasIndex);
+    const result = parseBulkOrderText("20 bolsitas Nexus\n15 bolsones Hotel Provincial", aliasIndex);
 
-    expect(lines).toEqual([
-      {
-        label: "Nexus",
-        rawFragment: "20 bolsitas",
-        items: [{ productId: "p2kg", rawFragment: "20 bolsitas", quantity: 20, matched: true }],
-      },
-      {
-        label: "Hotel provincial",
-        rawFragment: "15 bolsones",
-        items: [{ productId: "p10kg", rawFragment: "15 bolsones", quantity: 15, matched: true }],
-      },
-    ]);
+    expect(result).toEqual({
+      ok: true,
+      lines: [
+        {
+          label: "Nexus",
+          rawFragment: "20 bolsitas",
+          items: [{ productId: "p2kg", rawFragment: "20 bolsitas", quantity: 20, matched: true }],
+        },
+        {
+          label: "Hotel provincial",
+          rawFragment: "15 bolsones",
+          items: [{ productId: "p10kg", rawFragment: "15 bolsones", quantity: 15, matched: true }],
+        },
+      ],
+    });
   });
 
-  it("bails out (returns null) when a line matches neither shape", () => {
-    expect(parseBulkOrderText("30 bolsitas - Obrador\nhola", aliasIndex)).toBeNull();
+  it("reports the offending line instead of silently merging when a line matches neither shape", () => {
+    expect(parseBulkOrderText("30 bolsitas - Obrador\nhola", aliasIndex)).toEqual({
+      ok: false,
+      failedLine: "hola",
+    });
   });
 
-  it("bails out when a no-dash line has no label after the product", () => {
-    expect(parseBulkOrderText("20 bolsitas Nexus\n15 bolsones", aliasIndex)).toBeNull();
+  it("reports the offending line when a no-dash line has no label after the product", () => {
+    expect(parseBulkOrderText("20 bolsitas Nexus\n15 bolsones", aliasIndex)).toEqual({
+      ok: false,
+      failedLine: "15 bolsones",
+    });
   });
 
-  it("bails out when a line's items are entirely unrecognized", () => {
+  it("reports the offending line when a line's items are entirely unrecognized", () => {
+    expect(parseBulkOrderText("30 bolsitas - Obrador\nhola - Obrador2", aliasIndex)).toEqual({
+      ok: false,
+      failedLine: "hola - Obrador2",
+    });
+  });
+
+  it("bails out (returns null) for a single line that fits neither shape — could just be the owner chatting", () => {
     expect(parseBulkOrderText("hola - Obrador", aliasIndex)).toBeNull();
   });
 

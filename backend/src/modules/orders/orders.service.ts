@@ -2,7 +2,13 @@ import { DiscountType, OrderStatus, PaymentMethod, Prisma } from "@prisma/client
 import { prisma } from "../../lib/prisma.js";
 import { HttpError } from "../../middleware/errorHandler.js";
 import { normalizePhone } from "../../lib/phone.js";
-import { parseBulkOrderText, parseOrderText, type BulkOrderLine, type ParsedItem } from "../../parser/orderParser.js";
+import {
+  parseBulkOrderText,
+  parseOrderText,
+  type AliasEntry,
+  type BulkOrderLine,
+  type ParsedItem,
+} from "../../parser/orderParser.js";
 import { stripDiacritics } from "../../parser/textNormalize.js";
 import { buildAliasIndex } from "../aliases/aliases.service.js";
 
@@ -256,6 +262,46 @@ async function createBulkOrdersFromWhatsapp(
   return { order: createdOrders[0], replyText, addressCaptured: false };
 }
 
+/**
+ * A 2+ line owner message that looks like an attempted dispatch list but has
+ * a bad line (e.g. no client name after the product) never gets silently
+ * merged into one order anymore — that used to hide the mistake behind an
+ * unrelated "¿nos confirmás la dirección?" prompt. Instead it's saved as a
+ * single order (so nothing is lost) with a reply pointing at the exact line
+ * to fix, and the owner just resends the corrected full list.
+ */
+async function createBulkParseFailureOrder(
+  input: CreateOrderFromWhatsappInput,
+  failedLine: string,
+  aliasIndex: AliasEntry[],
+): Promise<WhatsappOrderResult> {
+  const parsedItems = parseOrderText(input.rawMessage, aliasIndex);
+  const customerId = await findCustomerIdByPhone(input.customerPhone);
+
+  const order = await prisma.order.create({
+    data: {
+      customerPhone: normalizePhone(input.customerPhone),
+      rawMessage: input.rawMessage,
+      waMessageId: input.waMessageId,
+      receivedAt: new Date(input.receivedAt),
+      customerId,
+      items: {
+        create: parsedItems.map((item) => ({
+          productId: item.productId,
+          rawFragment: item.rawFragment,
+          quantity: item.quantity,
+          matched: item.matched,
+        })),
+      },
+    },
+    include: { items: { include: { product: true } } },
+  });
+
+  const replyText = `🤔 No pudimos separar los pedidos por cliente. Revisá esta línea: "${failedLine}" (necesita cantidad, producto y nombre del cliente, ej: "15 bolsitas Jose"). Te dejamos todo como un solo pedido pendiente — corregilo y volvé a mandar la lista completa.`;
+
+  return { order, replyText, addressCaptured: false };
+}
+
 /** Adds more items to an already-open order (customer sent a follow-up message instead of a fresh order). */
 async function appendItemsToOrder(order: OrderWithItems, newItems: ParsedItem[], newRawMessage: string) {
   const createdItems = await Promise.all(
@@ -334,8 +380,11 @@ export async function createOrderFromWhatsapp(
   const aliasIndex = await buildAliasIndex();
 
   if (OWNER_PHONES.has(normalizePhone(input.customerPhone))) {
-    const bulkLines = parseBulkOrderText(input.rawMessage, aliasIndex);
-    if (bulkLines) return createBulkOrdersFromWhatsapp(input, bulkLines);
+    const bulkResult = parseBulkOrderText(input.rawMessage, aliasIndex);
+    if (bulkResult) {
+      if (bulkResult.ok) return createBulkOrdersFromWhatsapp(input, bulkResult.lines);
+      return createBulkParseFailureOrder(input, bulkResult.failedLine, aliasIndex);
+    }
 
     const bulkGroup = await findOpenBulkGroup(input.customerPhone);
     if (bulkGroup) {

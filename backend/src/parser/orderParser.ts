@@ -159,6 +159,8 @@ function capitalize(text: string): string {
   return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }
 
+export type BulkParseResult = { ok: true; lines: BulkOrderLine[] } | { ok: false; failedLine: string };
+
 /**
  * "30 bolsitas - Obrador\n2 bolsones - el puesto", or the same thing without a
  * dash ("20 bolsitas Nexus\n15 bolsones Hotel Provincial") → one order per
@@ -167,13 +169,15 @@ function capitalize(text: string): string {
  * regular customer's free text never happens to look like this, so there's no
  * ambiguity with the normal single-order parser above.
  *
- * Returns null (caller falls back to a normal single order) if any line
- * doesn't fit either shape, or has zero recognizable items, or (for the
- * no-dash shape) has no label after the product — an all-or-nothing check so
- * a message either reads entirely as a dispatch list or entirely as free
- * text, never a confusing mix.
+ * Returns null when the text isn't even an attempt at a dispatch list (blank,
+ * or a single line that fits neither shape — could just be the owner typing
+ * something unrelated, so the caller falls back to a normal single order).
+ * For a message with 2+ lines, a bad line instead comes back as
+ * `{ ok: false, failedLine }` — multiple lines only ever happen when the
+ * owner meant to dispatch a list, so silently merging everything into one
+ * order would hide the mistake instead of surfacing it.
  */
-export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): BulkOrderLine[] | null {
+export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): BulkParseResult | null {
   const lines = text
     .split("\n")
     .map((line) => line.trim())
@@ -186,7 +190,10 @@ export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): Bulk
     if (dashMatch) {
       const [, itemsText, label] = dashMatch;
       const items = parseOrderText(itemsText, aliasIndex);
-      if (items.length === 0 || items.every((item) => !item.matched)) return null;
+      if (items.length === 0 || items.every((item) => !item.matched)) {
+        if (lines.length === 1) return null;
+        return { ok: false, failedLine: line };
+      }
       result.push({ label: label.trim(), rawFragment: itemsText.trim(), items });
       continue;
     }
@@ -196,7 +203,10 @@ export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): Bulk
     const normalizedLine = normalize(line);
     const { quantity, rest } = extractQuantity(normalizedLine);
     const prefixMatch = matchAliasPrefix(rest, aliasIndex);
-    if (!prefixMatch || !prefixMatch.label) return null;
+    if (!prefixMatch || !prefixMatch.label) {
+      if (lines.length === 1) return null;
+      return { ok: false, failedLine: line };
+    }
 
     const productFragment = `${quantity} ${prefixMatch.entry.alias}`;
     const item: ParsedItem = {
@@ -208,5 +218,5 @@ export function parseBulkOrderText(text: string, aliasIndex: AliasEntry[]): Bulk
     result.push({ label: capitalize(prefixMatch.label), rawFragment: productFragment, items: [item] });
   }
 
-  return result;
+  return { ok: true, lines: result };
 }
