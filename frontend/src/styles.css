@@ -900,9 +900,7 @@ button {
 
 .compact-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -918,6 +916,13 @@ button {
   box-shadow: var(--shadow-lg);
   border-color: var(--color-primary);
   cursor: grabbing;
+}
+
+.compact-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
 }
 
 .compact-drag-handle {
@@ -963,24 +968,55 @@ button {
   flex-shrink: 0;
 }
 
-.compact-row-text {
+.compact-row-toggle {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 13.5px;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
 }
 
 .compact-row-client {
   font-weight: 700;
+  font-size: 13.5px;
   color: var(--text-primary);
-  flex-shrink: 0;
-  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-row-toggle .chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.compact-row-warning {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+
+.compact-row-deliver {
+  flex-shrink: 0;
+}
+
+.compact-row-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 10px 42px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+  padding-top: 8px;
+  animation: fade-in var(--transition-slow) var(--ease);
 }
 
 .compact-row-bags {
@@ -1009,30 +1045,12 @@ button {
 .compact-row-muted {
   color: var(--text-muted);
   font-style: italic;
-}
-
-.compact-row-warning {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  color: var(--color-warning);
+  font-size: 13px;
 }
 
 .compact-row-address {
-  flex: 1;
-  min-width: 0;
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.compact-row-sep {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.compact-row-deliver {
-  flex-shrink: 0;
+  font-size: 13px;
 }
 
 .order-card {
@@ -1946,10 +1964,6 @@ button {
   .product-actions {
     margin-left: 0;
     width: 100%;
-  }
-
-  .compact-row-client {
-    max-width: 90px;
   }
 
   .history-row {

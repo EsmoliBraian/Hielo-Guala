@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { Order } from "../types/api";
 import type { DeliverPayload } from "./DeliverModal";
 import { DeliverModal } from "./DeliverModal";
-import { IconAlertTriangle, IconGripVertical } from "./icons";
+import { IconAlertTriangle, IconChevronDown, IconGripVertical } from "./icons";
 
 interface CompactOrderRowProps {
   order: Order;
@@ -33,9 +33,10 @@ function bagBreakdown(order: Order): BagBreakdownEntry[] {
   return Array.from(byProduct.values());
 }
 
-/** One order per line — client, bag breakdown, address and the deliver action, nothing else. Drag by the handle to reorder. */
+/** One order per line — client, order number, deliver action. Tap the row for the bag/address detail. Drag by the handle to reorder. */
 export function CompactOrderRow({ order, position, onDeliver }: CompactOrderRowProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: order.id });
 
   const hasUnmatchedItems = order.items.some((item) => !item.matched);
@@ -49,38 +50,57 @@ export function CompactOrderRow({ order, position, onDeliver }: CompactOrderRowP
 
   return (
     <div ref={setNodeRef} style={style} className={`compact-row${isDragging ? " compact-row-dragging" : ""}`}>
-      <button type="button" className="compact-drag-handle" aria-label="Arrastrar para reordenar" {...attributes} {...listeners}>
-        <IconGripVertical width={15} height={15} />
-      </button>
+      <div className="compact-row-main">
+        <button
+          type="button"
+          className="compact-drag-handle"
+          aria-label="Arrastrar para reordenar"
+          {...attributes}
+          {...listeners}
+        >
+          <IconGripVertical width={15} height={15} />
+        </button>
 
-      <span className="compact-row-position">{position}</span>
+        <span className="compact-row-position">{position}</span>
 
-      <span className="compact-row-text">
-        <span className="compact-row-client">{clientLabel}</span>
-        <span className="compact-row-sep">·</span>
-        <span className="compact-row-bags">
-          {bags.length > 0 ? (
-            bags.map((bag) => (
-              <span className="bag-chip" key={bag.key}>
-                {bag.label} <strong>×{bag.quantity}</strong>
-              </span>
-            ))
-          ) : (
-            <span className="compact-row-muted">sin ítems reconocidos</span>
+        <button type="button" className="compact-row-toggle" onClick={() => setExpanded((prev) => !prev)}>
+          <span className="compact-row-client">{clientLabel}</span>
+          {hasUnmatchedItems && (
+            <span className="compact-row-warning" title="Hay ítems del pedido sin reconocer">
+              <IconAlertTriangle width={12} height={12} />
+            </span>
           )}
-        </span>
-        {hasUnmatchedItems && (
-          <span className="compact-row-warning" title="Hay ítems del pedido sin reconocer">
-            <IconAlertTriangle width={12} height={12} />
-          </span>
-        )}
-        <span className="compact-row-sep">·</span>
-        <span className="compact-row-address">{order.deliveryAddress ?? "Sin dirección"}</span>
-      </span>
+          <IconChevronDown width={13} height={13} className={`chevron${expanded ? " chevron-open" : ""}`} />
+        </button>
 
-      <button type="button" className="btn btn-primary btn-sm compact-row-deliver" onClick={() => setModalOpen(true)}>
-        Entregado
-      </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm compact-row-deliver"
+          onClick={(e) => {
+            e.stopPropagation();
+            setModalOpen(true);
+          }}
+        >
+          Entregado
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="compact-row-details">
+          <span className="compact-row-bags">
+            {bags.length > 0 ? (
+              bags.map((bag) => (
+                <span className="bag-chip" key={bag.key}>
+                  {bag.label} <strong>×{bag.quantity}</strong>
+                </span>
+              ))
+            ) : (
+              <span className="compact-row-muted">sin ítems reconocidos</span>
+            )}
+          </span>
+          <span className="compact-row-address">{order.deliveryAddress ?? "Sin dirección"}</span>
+        </div>
+      )}
 
       {modalOpen && <DeliverModal order={order} onClose={() => setModalOpen(false)} onDeliver={onDeliver} />}
     </div>
