@@ -244,6 +244,7 @@ export function OrdersBoard() {
                   position={index + 1}
                   onDeliver={handleDeliver}
                   onCancelled={handleOrderCancelled}
+                  onCustomerLinked={handleCustomerLinked}
                 />
               ))}
             </div>
