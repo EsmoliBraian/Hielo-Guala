@@ -1,3 +1,6 @@
+import type { DragEndEvent } from "@dnd-kit/core";
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { CompactOrderRow } from "../components/CompactOrderRow";
@@ -74,13 +77,19 @@ export function OrdersBoard() {
     [orderIds, ordersById],
   );
 
-  function moveOrder(index: number, direction: -1 | 1) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
     setOrderIds((prev) => {
-      const next = [...prev];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+      const oldIndex = prev.indexOf(String(active.id));
+      const newIndex = prev.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
     });
   }
 
@@ -185,20 +194,15 @@ export function OrdersBoard() {
       )}
 
       {!loading && !error && displayOrders.length > 0 && viewMode === "compact" && (
-        <div className="compact-list">
-          {displayOrders.map((order, index) => (
-            <CompactOrderRow
-              key={order.id}
-              order={order}
-              position={index + 1}
-              canMoveUp={index > 0}
-              canMoveDown={index < displayOrders.length - 1}
-              onMoveUp={() => moveOrder(index, -1)}
-              onMoveDown={() => moveOrder(index, 1)}
-              onDeliver={handleDeliver}
-            />
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={orderIds} strategy={verticalListSortingStrategy}>
+            <div className="compact-list">
+              {displayOrders.map((order, index) => (
+                <CompactOrderRow key={order.id} order={order} position={index + 1} onDeliver={handleDeliver} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </section>
 

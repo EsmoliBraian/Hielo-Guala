@@ -1,65 +1,73 @@
-import { useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useMemo, useState } from "react";
 import type { Order } from "../types/api";
 import type { DeliverPayload } from "./DeliverModal";
 import { DeliverModal } from "./DeliverModal";
-import { IconAlertTriangle, IconChevronDown, IconChevronUp } from "./icons";
+import { IconAlertTriangle, IconGripVertical } from "./icons";
 
 interface CompactOrderRowProps {
   order: Order;
   position: number;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onDeliver: (orderId: string, payload: DeliverPayload) => Promise<void>;
 }
 
-/** One order per line — client, bag count, address and the deliver action, nothing else. */
-export function CompactOrderRow({
-  order,
-  position,
-  canMoveUp,
-  canMoveDown,
-  onMoveUp,
-  onMoveDown,
-  onDeliver,
-}: CompactOrderRowProps) {
+interface BagBreakdownEntry {
+  key: string;
+  label: string;
+  quantity: number;
+}
+
+function bagBreakdown(order: Order): BagBreakdownEntry[] {
+  const byProduct = new Map<string, BagBreakdownEntry>();
+  for (const item of order.items) {
+    if (!item.matched || !item.product) continue;
+    const key = item.productId ?? item.product.name;
+    const existing = byProduct.get(key);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      byProduct.set(key, { key, label: `${item.product.weightKg}kg`, quantity: item.quantity });
+    }
+  }
+  return Array.from(byProduct.values());
+}
+
+/** One order per line — client, bag breakdown, address and the deliver action, nothing else. Drag by the handle to reorder. */
+export function CompactOrderRow({ order, position, onDeliver }: CompactOrderRowProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: order.id });
 
   const hasUnmatchedItems = order.items.some((item) => !item.matched);
-  const totalBags = order.items.filter((item) => item.matched).reduce((sum, item) => sum + item.quantity, 0);
+  const bags = useMemo(() => bagBreakdown(order), [order]);
   const clientLabel = order.customer?.name || order.customerPhone;
 
-  return (
-    <div className="compact-row animate-in">
-      <span className="compact-row-position">{position}</span>
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
-      <div className="compact-row-moves">
-        <button
-          type="button"
-          className="compact-move-btn"
-          onClick={onMoveUp}
-          disabled={!canMoveUp}
-          aria-label="Subir prioridad"
-        >
-          <IconChevronUp width={12} height={12} />
-        </button>
-        <button
-          type="button"
-          className="compact-move-btn"
-          onClick={onMoveDown}
-          disabled={!canMoveDown}
-          aria-label="Bajar prioridad"
-        >
-          <IconChevronDown width={12} height={12} />
-        </button>
-      </div>
+  return (
+    <div ref={setNodeRef} style={style} className={`compact-row${isDragging ? " compact-row-dragging" : ""}`}>
+      <button type="button" className="compact-drag-handle" aria-label="Arrastrar para reordenar" {...attributes} {...listeners}>
+        <IconGripVertical width={15} height={15} />
+      </button>
+
+      <span className="compact-row-position">{position}</span>
 
       <span className="compact-row-text">
         <span className="compact-row-client">{clientLabel}</span>
         <span className="compact-row-sep">·</span>
         <span className="compact-row-bags">
-          {totalBags} bolsa{totalBags === 1 ? "" : "s"}
+          {bags.length > 0 ? (
+            bags.map((bag) => (
+              <span className="bag-chip" key={bag.key}>
+                {bag.label} <strong>×{bag.quantity}</strong>
+              </span>
+            ))
+          ) : (
+            <span className="compact-row-muted">sin ítems reconocidos</span>
+          )}
         </span>
         {hasUnmatchedItems && (
           <span className="compact-row-warning" title="Hay ítems del pedido sin reconocer">

@@ -912,6 +912,41 @@ button {
   border-color: var(--border-strong);
 }
 
+.compact-row-dragging {
+  z-index: 10;
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+  cursor: grabbing;
+}
+
+.compact-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.compact-drag-handle:hover {
+  background: var(--color-surface-2);
+  color: var(--text-secondary);
+}
+
+.compact-drag-handle:active {
+  cursor: grabbing;
+}
+
 .compact-row-position {
   display: inline-flex;
   align-items: center;
@@ -925,40 +960,6 @@ button {
   font-weight: 700;
   font-size: 11px;
   flex-shrink: 0;
-}
-
-.compact-row-moves {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex-shrink: 0;
-}
-
-.compact-move-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 14px;
-  padding: 0;
-  border: none;
-  background: var(--color-surface-2);
-  color: var(--text-secondary);
-  border-radius: 4px;
-  cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.compact-move-btn:hover:not(:disabled) {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.compact-move-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 .compact-row-text {
@@ -982,8 +983,31 @@ button {
 }
 
 .compact-row-bags {
+  display: inline-flex;
+  gap: 4px;
   flex-shrink: 0;
-  color: var(--text-secondary);
+}
+
+.bag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.bag-chip strong {
+  font-weight: 700;
+}
+
+.compact-row-muted {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .compact-row-warning {
