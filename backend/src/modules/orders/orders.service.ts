@@ -550,7 +550,14 @@ export async function createManualOrder(input: CreateManualOrderInput) {
   });
 }
 
-/** Links an order (typically a WhatsApp order that arrived from an unknown phone) to a customer. */
+/**
+ * Links an order (typically a WhatsApp order that arrived from an unknown phone) to a customer.
+ * If the order's phone isn't registered to any customer yet, it also gets registered to this one
+ * (and any other orderless-customer orders from that same phone get backfilled) — so future
+ * WhatsApp orders from that number link automatically instead of needing this every time.
+ * Skipped for non-phone sources (manual counter orders default to customerPhone "Mostrador"),
+ * and left alone if the phone is already registered to a *different* customer.
+ */
 export async function assignCustomer(orderId: string, customerId: string) {
   const [order, customer] = await Promise.all([
     prisma.order.findUnique({ where: { id: orderId } }),
@@ -558,6 +565,18 @@ export async function assignCustomer(orderId: string, customerId: string) {
   ]);
   if (!order) throw new HttpError(404, "Pedido no encontrado");
   if (!customer) throw new HttpError(404, "Cliente no encontrado");
+
+  const phone = normalizePhone(order.customerPhone);
+  if (/^\d+$/.test(phone)) {
+    const existingPhoneLink = await prisma.customerPhone.findUnique({ where: { phone } });
+    if (!existingPhoneLink) {
+      await prisma.customerPhone.create({ data: { phone, customerId } });
+      await prisma.order.updateMany({
+        where: { customerPhone: phone, customerId: null },
+        data: { customerId },
+      });
+    }
+  }
 
   return prisma.order.update({
     where: { id: orderId },
