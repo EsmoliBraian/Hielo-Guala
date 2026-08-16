@@ -31,7 +31,7 @@ export async function getSalesMetrics({
 }: DateRange & { groupBy?: GroupBy }) {
   const sales = await prisma.sale.findMany({
     where: { deliveredAt: { gte: from, lte: to } },
-    include: { items: true },
+    include: { items: true, order: { select: { customerId: true, customer: { select: { name: true } } } } },
   });
 
   const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
@@ -67,6 +67,24 @@ export async function getSalesMetrics({
     byPaymentMethodMap.set(key, (byPaymentMethodMap.get(key) ?? 0) + Number(sale.totalAmount));
   }
 
+  // Only sales linked to a customer can be ranked by who bought — orders without
+  // one (unrecognized WhatsApp number, walk-in "Mostrador") have no identity to group by.
+  const byCustomerMap = new Map<string, { customerId: string; customerName: string; quantity: number; revenue: number }>();
+  for (const sale of sales) {
+    const customerId = sale.order?.customerId;
+    if (!customerId) continue;
+    const existing = byCustomerMap.get(customerId) ?? {
+      customerId,
+      customerName: sale.order?.customer?.name ?? "Cliente",
+      quantity: 0,
+      revenue: 0,
+    };
+    existing.quantity += sale.items.reduce((sum, item) => sum + item.quantity, 0);
+    existing.revenue += Number(sale.totalAmount);
+    byCustomerMap.set(customerId, existing);
+  }
+  const byCustomer = Array.from(byCustomerMap.values());
+
   return {
     totalRevenue,
     byProduct: Array.from(byProductMap.values()),
@@ -77,5 +95,7 @@ export async function getSalesMetrics({
       paymentMethod,
       revenue,
     })),
+    topCustomersByQuantity: [...byCustomer].sort((a, b) => b.quantity - a.quantity).slice(0, 10),
+    topCustomersByRevenue: [...byCustomer].sort((a, b) => b.revenue - a.revenue).slice(0, 10),
   };
 }

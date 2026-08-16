@@ -146,6 +146,38 @@ export function SalesMetrics() {
           <MetricsChart
             data={metrics.byPeriod.map((p) => ({ label: p.period, revenue: p.revenue }))}
           />
+
+          {metrics.topCustomersByQuantity.length > 0 && (
+            <>
+              <h3>Top 10 clientes por cantidad de productos</h3>
+              <ul className="customer-breakdown-list">
+                {metrics.topCustomersByQuantity.map((c, i) => (
+                  <li key={c.customerId}>
+                    <span className="customer-breakdown-label">
+                      {i + 1}. {c.customerName}
+                    </span>
+                    <span className="customer-breakdown-value">{c.quantity} productos</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {metrics.topCustomersByRevenue.length > 0 && (
+            <>
+              <h3>Top 10 clientes por dinero gastado</h3>
+              <ul className="customer-breakdown-list">
+                {metrics.topCustomersByRevenue.map((c, i) => (
+                  <li key={c.customerId}>
+                    <span className="customer-breakdown-label">
+                      {i + 1}. {c.customerName}
+                    </span>
+                    <span className="customer-breakdown-value">{CURRENCY_FORMATTER.format(c.revenue)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </section>

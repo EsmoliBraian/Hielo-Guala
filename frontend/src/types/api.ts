@@ -115,4 +115,6 @@ export interface SalesMetrics {
   byProduct: { productId: string | null; productName: string; quantity: number; revenue: number }[];
   byPeriod: { period: string; revenue: number }[];
   byPaymentMethod: { paymentMethod: string; revenue: number }[];
+  topCustomersByQuantity: { customerId: string; customerName: string; quantity: number; revenue: number }[];
+  topCustomersByRevenue: { customerId: string; customerName: string; quantity: number; revenue: number }[];
 }

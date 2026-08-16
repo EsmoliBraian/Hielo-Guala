@@ -200,6 +200,7 @@ export function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -225,11 +226,13 @@ export function CustomersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.phones.some((p) => p.phone.includes(q)),
+    const base = q
+      ? customers.filter((c) => c.name.toLowerCase().includes(q) || c.phones.some((p) => p.phone.includes(q)))
+      : customers;
+    return [...base].sort((a, b) =>
+      sortDirection === "asc" ? a.name.localeCompare(b.name, "es") : b.name.localeCompare(a.name, "es"),
     );
-  }, [customers, search]);
+  }, [customers, search, sortDirection]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -257,14 +260,27 @@ export function CustomersPage() {
         </button>
       </div>
 
-      <div className="field" style={{ marginBottom: 20 }}>
-        <input
-          type="text"
-          className="input"
-          placeholder="Buscar por nombre o teléfono..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <div className="field" style={{ flex: 1, minWidth: 200 }}>
+          <input
+            type="text"
+            className="input"
+            placeholder="Buscar por nombre o teléfono..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <select
+            className="select"
+            value={sortDirection}
+            onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+            aria-label="Ordenar por nombre"
+          >
+            <option value="asc">Nombre A-Z</option>
+            <option value="desc">Nombre Z-A</option>
+          </select>
+        </div>
       </div>
 
       {loading && (
