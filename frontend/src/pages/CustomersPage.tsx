@@ -34,7 +34,7 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   TRANSFER: "Transferencia",
-  DEBT: "Deuda pendiente",
+  DEBT: "Deuda",
   SIN_ESPECIFICAR: "Sin especificar",
 };
 

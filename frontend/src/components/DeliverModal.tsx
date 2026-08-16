@@ -192,7 +192,7 @@ export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
             onClick={handleSelectDebt}
           >
             <IconClipboardList />
-            Deuda pendiente
+            Deuda
           </button>
         </div>
 
