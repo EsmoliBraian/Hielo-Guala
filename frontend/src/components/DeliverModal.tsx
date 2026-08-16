@@ -16,6 +16,8 @@ export interface DeliverPayload {
   paymentMethod: PaymentMethod;
   discount?: { type: DiscountType; value: number } | null;
   customerId?: string;
+  /** Custom unit price per OrderItem id — only for items whose price got edited from the catalog value. */
+  itemPrices?: Record<string, number>;
 }
 
 interface DeliverModalProps {
@@ -24,10 +26,15 @@ interface DeliverModalProps {
   onDeliver: (orderId: string, payload: DeliverPayload) => Promise<void>;
 }
 
-/** The "¿Cómo pagó?" flow — discount, payment method, and (for debt) a customer to charge it to. */
+/** The "¿Cómo pagó?" flow — per-product price overrides, discount, payment method, and (for debt) a customer to charge it to. */
 export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const priceableItems = order.items.filter((item) => item.matched && item.product);
+  const [itemPrices, setItemPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(priceableItems.map((item) => [item.id, item.product!.price])),
+  );
 
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("PERCENTAGE");
@@ -39,9 +46,10 @@ export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
   const [debtCustomerId, setDebtCustomerId] = useState("");
   const [showCreateCustomer, setShowCreateCustomer] = useState(false);
 
-  const estimatedTotal = order.items
-    .filter((item) => item.matched && item.product)
-    .reduce((sum, item) => sum + item.quantity * Number(item.product!.price), 0);
+  const estimatedTotal = priceableItems.reduce(
+    (sum, item) => sum + item.quantity * (Number(itemPrices[item.id]) || 0),
+    0,
+  );
 
   const discountNumber = Number(discountValue) || 0;
   const discountAmount =
@@ -81,6 +89,9 @@ export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
         paymentMethod,
         discount: discountEnabled && discountNumber > 0 ? { type: discountType, value: discountNumber } : null,
         customerId: needsDebtCustomer ? debtCustomerId : undefined,
+        itemPrices: Object.fromEntries(
+          Object.entries(itemPrices).map(([itemId, value]) => [itemId, Number(value) || 0]),
+        ),
       });
       onClose();
     } catch (err) {
@@ -96,6 +107,29 @@ export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
         <p className="modal-summary">
           {order.customerPhone} — {estimatedTotal > 0 ? CURRENCY_FORMATTER.format(estimatedTotal) : "sin precio"}
         </p>
+
+        {priceableItems.length > 0 && (
+          <div className="field">
+            <label className="field-label">Precios (editables, por si este pedido lleva un precio distinto)</label>
+            <div className="item-price-rows">
+              {priceableItems.map((item) => (
+                <div className="item-price-row" key={item.id}>
+                  <span className="item-price-label">
+                    {item.quantity}x {item.product!.name}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input item-price-input"
+                    value={itemPrices[item.id] ?? ""}
+                    onChange={(e) => setItemPrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="discount-section">
           <label className="checkbox-row">

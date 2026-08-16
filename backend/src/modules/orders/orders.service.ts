@@ -670,6 +670,8 @@ interface DeliverOrderInput {
   discount?: { type: DiscountType; value: number } | null;
   /** Links (or overrides) the customer at delivery time — required when paymentMethod is DEBT and the order has no customer yet. */
   customerId?: string | null;
+  /** Custom unit price per OrderItem id, overriding the catalog price for that line — can go up or down, unlike `discount` which only ever reduces the subtotal. */
+  itemPrices?: Record<string, number>;
 }
 
 /**
@@ -700,7 +702,8 @@ export async function deliverOrder(id: string, input: DeliverOrderInput) {
     const saleItemsData = order.items
       .filter((item) => item.product !== null)
       .map((item) => {
-        const unitPrice = item.product!.price;
+        const customPrice = input.itemPrices?.[item.id];
+        const unitPrice = customPrice !== undefined ? new Prisma.Decimal(customPrice) : item.product!.price;
         return {
           productId: item.productId,
           productNameSnapshot: item.product!.name,

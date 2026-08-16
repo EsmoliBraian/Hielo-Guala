@@ -804,6 +804,30 @@ button {
   height: 22px;
 }
 
+/* Editable item prices (delivery modal) */
+
+.item-price-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-price-row {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-price-label {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.item-price-input {
+  text-align: right;
+}
+
 /* Discounts (delivery modal) */
 
 .discount-section {

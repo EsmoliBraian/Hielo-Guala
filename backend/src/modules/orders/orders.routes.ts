@@ -18,6 +18,7 @@ const deliverOrderSchema = z.object({
     .optional()
     .nullable(),
   customerId: z.string().min(1).optional().nullable(),
+  itemPrices: z.record(z.string(), z.number().min(0)).optional(),
 });
 
 const assignCustomerSchema = z.object({
