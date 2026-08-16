@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { MetricsChart } from "../components/MetricsChart";
+import { RankedBarList } from "../components/RankedBarList";
 import { IconBankTransfer, IconCash, IconClipboardList, IconTrendingUp } from "../components/icons";
 import type { SalesMetrics as SalesMetricsData } from "../types/api";
 
@@ -137,10 +138,19 @@ export function SalesMetrics() {
             })}
           </div>
 
-          <h3>Por producto</h3>
-          <MetricsChart
-            data={metrics.byProduct.map((p) => ({ label: p.productName, revenue: p.revenue }))}
-          />
+          {metrics.byProduct.length > 0 && (
+            <>
+              <h3>Por producto</h3>
+              <RankedBarList
+                items={metrics.byProduct.map((p) => ({
+                  id: p.productId ?? p.productName,
+                  label: p.productName,
+                  value: p.revenue,
+                }))}
+                formatValue={(v) => CURRENCY_FORMATTER.format(v)}
+              />
+            </>
+          )}
 
           <h3>Por período</h3>
           <MetricsChart
@@ -150,32 +160,28 @@ export function SalesMetrics() {
           {metrics.topCustomersByQuantity.length > 0 && (
             <>
               <h3>Top 10 clientes por cantidad de productos</h3>
-              <ul className="customer-breakdown-list">
-                {metrics.topCustomersByQuantity.map((c, i) => (
-                  <li key={c.customerId}>
-                    <span className="customer-breakdown-label">
-                      {i + 1}. {c.customerName}
-                    </span>
-                    <span className="customer-breakdown-value">{c.quantity} productos</span>
-                  </li>
-                ))}
-              </ul>
+              <RankedBarList
+                items={metrics.topCustomersByQuantity.map((c) => ({
+                  id: c.customerId,
+                  label: c.customerName,
+                  value: c.quantity,
+                }))}
+                formatValue={(v) => `${v} productos`}
+              />
             </>
           )}
 
           {metrics.topCustomersByRevenue.length > 0 && (
             <>
               <h3>Top 10 clientes por dinero gastado</h3>
-              <ul className="customer-breakdown-list">
-                {metrics.topCustomersByRevenue.map((c, i) => (
-                  <li key={c.customerId}>
-                    <span className="customer-breakdown-label">
-                      {i + 1}. {c.customerName}
-                    </span>
-                    <span className="customer-breakdown-value">{CURRENCY_FORMATTER.format(c.revenue)}</span>
-                  </li>
-                ))}
-              </ul>
+              <RankedBarList
+                items={metrics.topCustomersByRevenue.map((c) => ({
+                  id: c.customerId,
+                  label: c.customerName,
+                  value: c.revenue,
+                }))}
+                formatValue={(v) => CURRENCY_FORMATTER.format(v)}
+              />
             </>
           )}
         </>
