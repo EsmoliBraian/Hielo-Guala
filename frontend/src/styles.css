@@ -1545,10 +1545,22 @@ button {
    ========================================================================== */
 
 .customer-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 700;
   font-size: 15px;
   color: var(--text-primary);
   min-width: 140px;
+}
+
+.debtor-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning) 25%, transparent);
+  flex-shrink: 0;
 }
 
 .customer-phones {

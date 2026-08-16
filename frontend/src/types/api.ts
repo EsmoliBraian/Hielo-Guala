@@ -70,6 +70,7 @@ export interface CustomerRecord {
 export interface Customer extends CustomerRecord {
   orderCount: number;
   totalSpent: number;
+  pendingDebt: number;
 }
 
 export interface CustomerDetail {

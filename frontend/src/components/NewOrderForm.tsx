@@ -145,7 +145,7 @@ export function NewOrderForm({ onCreated, onCancel }: NewOrderFormProps) {
         onClose={() => setShowCustomerForm(false)}
         onSaved={(customer) => {
           setShowCustomerForm(false);
-          setCustomers((prev) => [...prev, { ...customer, orderCount: 0, totalSpent: 0 }]);
+          setCustomers((prev) => [...prev, { ...customer, orderCount: 0, totalSpent: 0, pendingDebt: 0 }]);
           setCustomerId(customer.id);
         }}
       />

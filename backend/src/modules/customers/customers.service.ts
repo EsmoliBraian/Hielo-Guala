@@ -46,19 +46,29 @@ export async function listCustomers() {
 
   const sales = await prisma.sale.findMany({
     where: { order: { customerId: { not: null } } },
-    select: { totalAmount: true, order: { select: { customerId: true } } },
+    select: {
+      totalAmount: true,
+      paymentMethod: true,
+      debtSettledAt: true,
+      order: { select: { customerId: true } },
+    },
   });
 
   const totalSpentByCustomer = new Map<string, number>();
+  const pendingDebtByCustomer = new Map<string, number>();
   for (const sale of sales) {
     const customerId = sale.order.customerId!;
     totalSpentByCustomer.set(customerId, (totalSpentByCustomer.get(customerId) ?? 0) + Number(sale.totalAmount));
+    if (sale.paymentMethod === "DEBT" && !sale.debtSettledAt) {
+      pendingDebtByCustomer.set(customerId, (pendingDebtByCustomer.get(customerId) ?? 0) + Number(sale.totalAmount));
+    }
   }
 
   return customers.map(({ _count, ...customer }) => ({
     ...customer,
     orderCount: _count.orders,
     totalSpent: totalSpentByCustomer.get(customer.id) ?? 0,
+    pendingDebt: pendingDebtByCustomer.get(customer.id) ?? 0,
   }));
 }
 

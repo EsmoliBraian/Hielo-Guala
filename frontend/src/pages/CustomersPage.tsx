@@ -200,7 +200,7 @@ export function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"asc" | "desc" | "debtors">("asc");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -226,13 +226,19 @@ export function CustomersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const base = q
+    let base = q
       ? customers.filter((c) => c.name.toLowerCase().includes(q) || c.phones.some((p) => p.phone.includes(q)))
       : customers;
+    if (viewMode === "debtors") base = base.filter((c) => c.pendingDebt > 0);
+
     return [...base].sort((a, b) =>
-      sortDirection === "asc" ? a.name.localeCompare(b.name, "es") : b.name.localeCompare(a.name, "es"),
+      viewMode === "debtors"
+        ? b.pendingDebt - a.pendingDebt
+        : viewMode === "asc"
+          ? a.name.localeCompare(b.name, "es")
+          : b.name.localeCompare(a.name, "es"),
     );
-  }, [customers, search, sortDirection]);
+  }, [customers, search, viewMode]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -273,12 +279,13 @@ export function CustomersPage() {
         <div className="field">
           <select
             className="select"
-            value={sortDirection}
-            onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
-            aria-label="Ordenar por nombre"
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value as "asc" | "desc" | "debtors")}
+            aria-label="Ordenar o filtrar clientes"
           >
             <option value="asc">Nombre A-Z</option>
             <option value="desc">Nombre Z-A</option>
+            <option value="debtors">Deudores</option>
           </select>
         </div>
       </div>
@@ -317,7 +324,12 @@ export function CustomersPage() {
             return (
               <article key={customer.id} className="product-card animate-in">
                 <div className="product-row">
-                  <span className="customer-name">{customer.name}</span>
+                  <span className="customer-name">
+                    {customer.pendingDebt > 0 && (
+                      <span className="debtor-dot" title={`Debe ${CURRENCY_FORMATTER.format(customer.pendingDebt)}`} />
+                    )}
+                    {customer.name}
+                  </span>
                   <div className="customer-phones">
                     {customer.phones.map((p) => (
                       <span key={p.id} className="phone-chip">

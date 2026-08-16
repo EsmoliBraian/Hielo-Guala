@@ -235,7 +235,7 @@ export function DeliverModal({ order, onClose, onDeliver }: DeliverModalProps) {
           onClose={() => setShowCreateCustomer(false)}
           onSaved={(customer) => {
             setShowCreateCustomer(false);
-            setDebtCustomers((prev) => [...prev, { ...customer, orderCount: 0, totalSpent: 0 }]);
+            setDebtCustomers((prev) => [...prev, { ...customer, orderCount: 0, totalSpent: 0, pendingDebt: 0 }]);
             setDebtCustomerId(customer.id);
           }}
         />
