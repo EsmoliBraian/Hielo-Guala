@@ -63,12 +63,6 @@
   --transition: 220ms var(--ease);
   --transition-slow: 320ms var(--ease);
 
-  /* Chart tokens (consumed by MetricsChart, per the dataviz design system) */
-  --surface-1: var(--color-surface);
-  --muted: var(--text-secondary);
-  --gridline: var(--border);
-  --baseline: var(--border-strong);
-
   /* Categorical series — fixed order, validated for CVD-safe adjacent pairs.
      Never reassign per-render; a given slot index always maps to the same hue. */
   --series-1: #2a78d6; /* blue */
@@ -1785,15 +1779,6 @@ button {
 
 .stat-tile-value-sm {
   font-size: 20px;
-}
-
-.viz-root {
-  background: var(--color-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xs);
-  padding: 12px;
-  margin-bottom: 24px;
 }
 
 /* Ranked bar list (top-10 style tables) */

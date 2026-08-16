@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { MetricsChart } from "../components/MetricsChart";
 import { RankedBarList } from "../components/RankedBarList";
 import { IconBankTransfer, IconCash, IconClipboardList, IconTrendingUp } from "../components/icons";
 import type { SalesMetrics as SalesMetricsData } from "../types/api";
@@ -10,6 +9,16 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
   currency: "ARS",
   maximumFractionDigits: 0,
 });
+
+const PERIOD_LABEL_FORMATTER = new Intl.DateTimeFormat("es-AR", {
+  day: "numeric",
+  month: "short",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
+function periodLabel(period: string): string {
+  return PERIOD_LABEL_FORMATTER.format(new Date(`${period}T12:00:00`));
+}
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
@@ -152,10 +161,19 @@ export function SalesMetrics() {
             </>
           )}
 
-          <h3>Por período</h3>
-          <MetricsChart
-            data={metrics.byPeriod.map((p) => ({ label: p.period, revenue: p.revenue }))}
-          />
+          {metrics.byPeriod.length > 0 && (
+            <>
+              <h3>Por período</h3>
+              <RankedBarList
+                items={metrics.byPeriod.map((p) => ({
+                  id: p.period,
+                  label: periodLabel(p.period),
+                  value: p.revenue,
+                }))}
+                formatValue={(v) => CURRENCY_FORMATTER.format(v)}
+              />
+            </>
+          )}
 
           {metrics.topCustomersByQuantity.length > 0 && (
             <>
