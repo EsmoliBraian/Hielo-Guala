@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { MetricsChart } from "../components/MetricsChart";
-import { IconBankTransfer, IconCash, IconTrendingUp } from "../components/icons";
+import { IconBankTransfer, IconCash, IconClipboardList, IconTrendingUp } from "../components/icons";
 import type { SalesMetrics as SalesMetricsData } from "../types/api";
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
@@ -13,12 +13,14 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   TRANSFER: "Transferencia",
+  DEBT: "Deuda pendiente",
   SIN_ESPECIFICAR: "Sin especificar",
 };
 
 const PAYMENT_METHOD_ICONS: Record<string, typeof IconCash> = {
   CASH: IconCash,
   TRANSFER: IconBankTransfer,
+  DEBT: IconClipboardList,
 };
 
 function isoDateDaysAgo(days: number): string {

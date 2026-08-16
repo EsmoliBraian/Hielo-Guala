@@ -7,6 +7,7 @@ import {
   IconBankTransfer,
   IconCash,
   IconChevronDown,
+  IconClipboardList,
   IconPackage,
   IconPhone,
   IconPlus,
@@ -33,12 +34,14 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Efectivo",
   TRANSFER: "Transferencia",
+  DEBT: "Deuda pendiente",
   SIN_ESPECIFICAR: "Sin especificar",
 };
 
 const PAYMENT_METHOD_ICONS: Record<string, typeof IconCash> = {
   CASH: IconCash,
   TRANSFER: IconBankTransfer,
+  DEBT: IconClipboardList,
 };
 
 function CustomerDetailPanel({ customerId }: { customerId: string }) {

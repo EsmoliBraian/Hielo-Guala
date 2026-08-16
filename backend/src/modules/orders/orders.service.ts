@@ -649,6 +649,7 @@ export function listOrderHistory({ days, date, customerId }: HistoryFilters) {
     include: {
       items: { include: { product: true } },
       sale: true,
+      customer: { select: { name: true } },
     },
     orderBy: { updatedAt: "desc" },
   });

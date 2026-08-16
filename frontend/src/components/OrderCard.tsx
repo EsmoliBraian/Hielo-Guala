@@ -4,7 +4,7 @@ import { CancelOrderButton } from "./CancelOrderButton";
 import { CustomerLinkButton } from "./CustomerLinkButton";
 import type { DeliverPayload } from "./DeliverModal";
 import { DeliverModal } from "./DeliverModal";
-import { IconClock, IconMapPin, IconPhone } from "./icons";
+import { IconClock, IconMapPin, IconPhone, IconUsers } from "./icons";
 import { OrderItemsList } from "./OrderItemsList";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("es-AR", {
@@ -33,8 +33,17 @@ export function OrderCard({ order, position, onDeliver, onCustomerLinked, onCanc
       <header className="order-card-header">
         <span className="order-position">#{position}</span>
         <span className="order-phone">
-          <IconPhone width={15} height={15} />
-          {order.customerPhone}
+          {order.customer?.name ? (
+            <>
+              <IconUsers width={15} height={15} />
+              {order.customer.name}
+            </>
+          ) : (
+            <>
+              <IconPhone width={15} height={15} />
+              {order.customerPhone}
+            </>
+          )}
         </span>
         {order.deliveryAddress && (
           <span className="order-address" title={order.deliveryAddress}>

@@ -45,7 +45,7 @@ export function CompactOrderRow({ order, position, onDeliver, onCancelled, onCus
 
   const hasUnmatchedItems = order.items.some((item) => !item.matched);
   const bags = useMemo(() => bagBreakdown(order), [order]);
-  const clientLabel = order.customer?.name || order.deliveryAddress || order.customerPhone;
+  const clientLabel = order.customer?.name || order.customerPhone;
 
   const style = {
     transform: CSS.Transform.toString(transform),

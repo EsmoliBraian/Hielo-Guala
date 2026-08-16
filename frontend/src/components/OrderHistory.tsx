@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Order } from "../types/api";
 import { CustomerLinkButton } from "./CustomerLinkButton";
-import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconTrash, IconX } from "./icons";
+import { IconAlertTriangle, IconClock, IconInbox, IconMapPin, IconPhone, IconTrash, IconUsers, IconX } from "./icons";
 import { Modal } from "./Modal";
 
 const DAY_OPTIONS = [
@@ -234,8 +234,17 @@ export function OrderHistory({ customerId }: OrderHistoryProps = {}) {
                           {TIME_FORMATTER.format(new Date(order.receivedAt))}
                         </span>
                         <span className="order-phone">
-                          <IconPhone width={13} height={13} />
-                          {order.customerPhone}
+                          {order.customer?.name ? (
+                            <>
+                              <IconUsers width={13} height={13} />
+                              {order.customer.name}
+                            </>
+                          ) : (
+                            <>
+                              <IconPhone width={13} height={13} />
+                              {order.customerPhone}
+                            </>
+                          )}
                         </span>
                         {order.deliveryAddress && (
                           <span className="order-address" title={order.deliveryAddress}>
